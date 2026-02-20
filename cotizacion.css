@@ -1,0 +1,375 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont,
+    "SF Pro Display", "SF Pro Text",
+    "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+
+}
+
+
+
+header{
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+.barra{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 64px;
+  background-color: #ffff;
+  position: relative;
+
+}
+
+.titulo{
+  color: #093287;
+}
+
+.barraLinks{
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+}
+
+.barraLinks li {
+  margin-left: 24px;
+    width: 100%;
+}
+
+.barraLinks a {
+  text-decoration: none;
+  color: #093287;
+  font-size: 16px;
+  padding: 8px 24px;
+  border-radius: 30px;
+  transition: background-color 0.3s ease;
+}
+
+.barraLinks a:hover{
+  background-color: #eaeaea;
+}
+
+.menuIcono{
+  display: none;
+  flex-direction: column;
+  cursor: pointer;
+  margin-left: auto;
+  position: relative;
+  z-index: 1;
+}
+
+.menuIcono .line{
+  width: 30px;
+  height: 3px;
+  background-color: #093287;
+  margin: 5px;
+  transition: all 0.3s ease;
+}
+
+#menu {
+  display: none;
+}
+
+
+
+
+@media(max-width: 1024px){
+  .barra{
+    padding: 16px;
+  }
+
+  .cardsPagos{
+    flex-direction: column;
+  }
+
+  .menuIcono{
+    display: flex;
+  }
+
+  .barraLinks{
+    position: absolute;
+    top: 70px;
+    right: 0;
+    width: 100%;
+    height: 0;
+    overflow: hidden;
+    flex-direction: column;
+    background-color: #ffff;
+    text-align: center;
+    transition: height 0.5s ease;
+  }
+
+  .barraLinks li {
+    margin: 0;
+    padding: 20px 0;
+    width: 100%;
+  }
+
+  .barraLinks a{
+    width: 100%;
+    padding: 10px 20px;
+  }
+
+  #menu:checked + .menuIcono + .barraLinks{
+    height: 8vh;
+  }
+
+  #menu:checked + .menuIcono .line:nth-child(1){
+    transform: rotate(45deg) translate(15px, 3px);
+  }
+
+  #menu:checked + .menuIcono .line:nth-child(2){
+    transform: scale(0);
+  }
+
+  #menu:checked + .menuIcono .line:nth-child(3){
+    transform: rotate(-45deg) translate(15px, -4px);
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+section {
+  scroll-margin-top: 70px; 
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+.cotizacion{
+  width: 100%;
+  background-color: #093287;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 20px;
+}
+
+
+
+.cotizadorBox {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #093287;
+  padding: 40px 20px;
+  font-family: Arial, sans-serif;
+}
+
+.cotizadorContenido {
+  background-color: #072b72c0;
+  color: white;
+  max-width: 600px;
+  width: 100%;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 0 10px #4374CC;
+}
+
+
+.cotizadorContenido h2 {
+  text-align: center;
+  margin-bottom: 10px;
+  color: #eaeaea;
+}
+
+.cotizadorContenido p {
+  text-align: center;
+  color: #eaeaea;
+  margin-bottom: 25px;
+}
+
+.cotizadorContenido h3 {
+  margin-top: 20px;
+  margin-bottom: 8px;
+  font-size: 15px;
+  color: #eaeaea;
+}
+
+
+
+select,
+input[type="email"],
+input[type="text"] {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: none;
+  outline: none;
+  margin-bottom: 10px;
+  font-size: 16px;
+}
+
+
+.estadoCotizacion {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+  margin-top: -10px;
+}
+
+
+.checkboxCotizacion input[type="checkbox"] {
+  display: none;
+}
+
+
+.checkboxCotizacion label {
+  position: relative;
+  padding-left: 36px;
+  cursor: pointer;
+  display: block;
+  background: rgba(255,255,255,0.05);
+  padding: 10px 10px 10px 36px;
+  border-radius: 10px;
+  transition: 0.3s;
+}
+
+
+.checkboxCotizacion label::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 2px solid #eaeaea;
+  background: transparent;
+}
+
+
+.checkboxCotizacion label::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 2px solid #EAEAEA;
+  background: transparent;
+  transition: 0.25s ease;
+}
+
+.checkboxCotizacion input:checked + label::before {
+  background: #EAEAEA;
+  box-shadow: inset 0 0 0 2px #093287;
+}
+
+.checkboxCotizacion input:checked + label {
+  background: rgba(0,207,255,0.15);
+}
+
+.checkboxCotizacion input:checked + label::after {
+  transform: translateY(-50%) scale(1);
+}
+
+
+button {
+  width: 48%;
+  padding: 12px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  margin-top: 20px;
+  font-weight: bold;
+}
+
+button[type="submit"] {
+  background: #00cfff;
+  color: #000;
+}
+
+button[type="reset"] {
+  background: #eaeaea;
+  color: black;
+}
+
+
+#caracteristicas{
+  font-size: 20px;
+  margin-top: 50px;
+}
+
+#caracteristicasParrafo{
+  text-align: start;
+}
+
+
+#correo{
+  font-size: 18px;
+}
+
+#numero{
+  font-size: 18px;
+}
+
+#resultadoCotizacion {
+  margin-top: 25px;
+  padding: 15px;
+  background: rgba(255,255,255,0.08);
+  border-radius: 10px;
+  text-align: center;
+}
+
+#precioFinal {
+  font-size: 26px;
+  font-weight: bold;
+  color: #EAEAEA;
+}

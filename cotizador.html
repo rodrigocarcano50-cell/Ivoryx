@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Ivoryx</title>
+  <link rel="stylesheet" href="cotizacion.css" />
+</head>
+<body>
+
+
+  <header>
+        <nav class="barra">
+        <h1 class="titulo">ivorix</h1>
+        <input type="checkbox" name="" id="menu">
+        <label for="menu" class="menuIcono">
+          <div class="line"></div>
+          <div class="line"></div>
+          <div class="line"></div>
+        </label>
+
+        <ul class="barraLinks">
+          <li><a href="index.html">Inicio</a></li>
+        </ul>
+      </nav>
+  </header>
+
+
+
+
+
+  <section class="cotizadorBox">
+    <div class="cotizadorContenido">
+            <h2>Cotizá tu iPhone</h2>
+    <p>Seleccioná las características y conocé cuánto podríamos ofrecerte</p>
+    <form action="">
+        <h3>Modelo del iPhone</h3>
+    <select name="modelo">
+      <option>Seleccionar Equipo</option>
+      <option>iPhone 12</option>
+      <option>iPhone 12 Pro</option>
+      <option>iPhone 12 Pro Max</option>
+      <option>iPhone 13</option>
+      <option>iPhone 13 Pro</option>
+      <option>iPhone 13 Pro Max</option>
+      <option>iPhone 14</option>
+      <option>iPhone 14 Plus</option>
+      <option>iPhone 14 Pro</option>
+      <option>iPhone 14 Pro Max</option>
+      <option>iPhone 15</option>
+      <option>iPhone 15 Plus</option>
+      <option>iPhone 15 Pro</option>
+      <option>iPhone 15 Pro Max</option>
+      <option>iPhone 16</option>
+      <option>iPhone 16</option>
+      <option>iPhone 16E</option>
+      <option>iPhone 16 Plus</option>
+      <option>iPhone 16 Pro</option>
+      <option>iPhone 16 Pro Max</option>
+      <option>iPhone 16 Pro Max</option>
+      <option>iPhone 17</option>
+      <option>iPhone 17 Air</option>
+      <option>iPhone 17 Pro</option>
+      <option>iPhone 17 Pro Max</option>
+    </select>
+
+    <h3>Capacidad (GB)</h3>
+    <select name="capacidad">
+      <option>Seleccionar</option>
+      <option>64 GB</option>
+      <option>128 GB</option>
+      <option>256 GB</option>
+      <option>512 GB</option>
+    </select>
+
+    <h3>Capacidad de Bateria</h3>
+    <select name="bateria">
+      <option>Seleccionar</option>
+      <option>100%</option>
+      <option>95%-99%</option>
+      <option>90%-94%</option>
+      <option>85%-89%</option>
+      <option>80%-84%</option>
+      <option>Menos de 79%</option>
+    </select>
+
+    <h3 id="caracteristicas">Características</h3>
+    <p id="caracteristicasParrafo">Colocar cada casilla segun que fallo tiene tu equipo.</p>
+    <div class="estadoCotizacion">
+        <div class="checkboxCotizacion">
+            <div class="perfectoEstado">
+                <input type="checkbox" id="perfectoEstado">
+                <label for="perfectoEstado">"En perfecto estado"</label>
+            </div>
+        </div>
+
+
+
+        <div class="checkboxCotizacion">
+            <div class="rayonesPantalla">
+                <input type="checkbox" id="rayonesPantalla">
+                <label for="rayonesPantalla">"Rayones en pantalla"</label>
+            </div>
+        </div>
+        <div class="checkboxCotizacion">
+            <div class="pantallaTrizada">
+                <input type="checkbox" id="pantallaTrizada">
+                <label for="pantallaTrizada">"Pantalla trizada"</label>
+            </div>
+        </div>
+        <div class="checkboxCotizacion">
+            <div class="pantallaCambiada">
+                <input type="checkbox" id="pantallaCambiada">
+                <label for="pantallaCambiada">"Pantalla cambiada"</label>
+            </div>
+        </div>
+
+
+
+
+
+        <div class="checkboxCotizacion">
+            <div class="tapaTrizada">
+                <input type="checkbox" id="tapaTrizada">
+                <label for="tapaTrizada">"Tapa trasera trizada / rayada"</label>
+            </div>
+        </div>
+
+        <div class="checkboxCotizacion">
+            <div class="tapaCambiada">
+                <input type="checkbox" id="tapaCambiada">
+                <label for="tapaCambiada">"Tapa trasera cambiada"</label>
+            </div>
+        </div>
+
+
+
+
+
+
+        <div class="checkboxCotizacion">
+            <div class="falloCamaras">
+                <input type="checkbox" id="falloCamaras">
+                <label for="falloCamaras">"Fallo en las camaras"</label>
+            </div>
+        </div>
+
+        <div class="checkboxCotizacion">
+            <div class="camaraCambiada">
+                <input type="checkbox" id="camaraCambiada">
+                <label for="camaraCambiada">"Camara cambiada"</label>
+            </div>
+        </div>
+
+        <div class="checkboxCotizacion">
+            <div class="faceidNo">
+                <input type="checkbox" id="faceidNo">
+                <label for="faceidNo">"Face ID no funciona"</label>
+            </div>
+        </div>
+
+
+
+
+
+
+
+        <div class="checkboxCotizacion">
+            <div class="bateriaCambiada">
+                <input type="checkbox" id="bateriaCambiada">
+                <label for="bateriaCambiada">"Bateria cambiada"</label>
+            </div>
+        </div>
+        <div class="checkboxCotizacion">
+            <div class="microfonoNO">
+                <input type="checkbox" id="microfonoNO">
+                <label for="microfonoNO">"microfono no funciona"</label>
+            </div>
+        </div>
+        <div class="checkboxCotizacion">
+            <div class="altavozNo">
+                <input type="checkbox" id="altavozNO">
+                <label for="altavozNO">"Altavoces no funcionan"</label>
+            </div>
+        </div>
+        <div class="checkboxCotizacion">
+            <div class="botonesNO">
+                <input type="checkbox" id="botonesNO">
+                <label for="botonesNO">"Botones no funcion / fallan"</label>
+            </div>
+        </div>
+    </div>
+
+    <h3 id="correo">Correo Electronico</h3>
+    <input type="email" name="email" placeholder="Correo electrónico">
+    <h3 id="numero">Número de Telefono</h3>
+    <input type="text" name="telefono" placeholder="Número de teléfono">
+
+    <button type="reset">Reiniciar</button> 
+    <button type="submit">Calcular</button>
+    </form>
+
+        <div id="resultadoCotizacion">
+            <h3>Precio estimado</h3>
+            <p id="precioFinal">$ —</p>
+        </div>
+    </div>
+</section>
+<script src="cotizador.js"></script>
+</body>
+</html>
