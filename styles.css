@@ -602,41 +602,37 @@ section {
 
 .contacto {
   background-color: #093287;
-  padding: 70px 20px;
+  padding: 30px 20px;
   text-align: center;
+  margin-top: 50px;
 }
 
 .tituloContacto {
-  color: #093287;
-  font-size: 36px;
-  margin-bottom: 10px;
+  color: #ffff;
+  font-size: 40px;
+  margin-bottom: 20px;
 }
 
 .contacto p {
-  color: #8E8E93;
-  margin-bottom: 30px;
+  color: #ffff;
+  font-size: 16px;
+  margin-bottom: 40px;
 }
 
-.contacto ul {
-  list-style: none;
-  padding: 0;
+.contactoLinks {
   display: flex;
   justify-content: center;
-  gap: 20px;
+  gap: 16px;
   flex-wrap: wrap;
 }
 
-.contacto ul li a {
+.contactoBtn {
   text-decoration: none;
-  color: #093287;
-  font-weight: 500;
-  padding: 10px 22px;
-  border: 1px solid #093287;
-  border-radius: 999px;
+  padding: 12px 18px;
   transition: all 0.3s ease;
 }
 
-.contacto ul li a:hover {
+.contactoBtn:hover {
   background-color: #093287;
   color: #ffffff;
 }
@@ -664,18 +660,26 @@ section {
 
 
 .footer {
-  background-color: #f5f5f5;
-  padding: 40px 20px;
+  background-color: #ffffff;
+  padding: 10px 20px;
   text-align: center;
 }
 
-.tituloFooter h3 {
+.footerContenido h3 {
   color: #093287;
-  font-size: 24px;
-  margin-bottom: 5px;
+  font-size: 26px;
+  margin-bottom: 6px;
 }
 
-.tituloFooter p {
+.footerContenido p {
   color: #8E8E93;
   font-size: 14px;
+  margin-bottom: 6px;
+}
+
+
+.footer small {
+  color: #8E8E93;
+  font-size: 12px;
+  padding: 10px 0;
 }
