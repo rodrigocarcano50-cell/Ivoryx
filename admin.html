@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex, nofollow" />
+  <title>Admin | Ivoryx</title>
+  <meta name="theme-color" content="#093287" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css" />
+  <link rel="stylesheet" href="admin.css" />
+</head>
+
+<body class="admin">
+  <script>try { if (localStorage.getItem('ivoryx_tema') === 'oscuro') document.body.classList.add('oscuro'); } catch (e) {}</script>
+
+  <header class="header scrolled">
+    <nav class="barra contenedor">
+      <a href="index.html" class="titulo" aria-label="Ivoryx, ir al sitio">IVORYX</a>
+      <div class="adminNav">
+        <a href="index.html" class="adminVolver">Ver sitio</a>
+        <button type="button" class="btnIconoAdmin btnTema" id="btnTema" aria-label="Usar modo oscuro" aria-pressed="false">
+          <svg class="iconoLuna" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+          <svg class="iconoSol" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        </button>
+        <button type="button" class="btnTexto" id="btnCambiarClave" hidden>Contraseña</button>
+        <button type="button" class="btnTexto" id="btnSalir" hidden>Salir</button>
+      </div>
+    </nav>
+  </header>
+
+  <main class="acceso" id="acceso">
+    <form class="accesoCaja" id="formAcceso" novalidate>
+      <h1>Admin de Ivoryx</h1>
+      <p>Ingresá la contraseña para manejar equipos, stock y ventas.</p>
+      <div class="campo">
+        <label for="clave">Contraseña</label>
+        <div class="claveCampo">
+          <input type="password" id="clave" autocomplete="current-password" required autofocus>
+          <button type="button" class="verClave" aria-label="Mostrar contraseña" aria-pressed="false">
+            <svg class="ojoAbierto" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+            <svg class="ojoCerrado" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 5.1A10.7 10.7 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-2.6 3.5M6.6 6.6C3.7 8.4 2 12 2 12s3.6 7 10 7c1.9 0 3.6-.6 5-1.5M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
+        <p class="error" id="errorClave" hidden></p>
+      </div>
+      <button type="submit" class="btn btnPrimario" id="btnIngresar">Ingresar</button>
+    </form>
+  </main>
+
+  <main class="contenedor adminMain" id="panel" hidden>
+
+    <nav class="secciones" id="secciones" aria-label="Secciones del admin">
+      <a href="#resumen" data-seccion="resumen">Resumen</a>
+      <a href="#equipos" data-seccion="equipos">Equipos</a>
+      <a href="#stock" data-seccion="stock">Stock de accesorios</a>
+      <a href="#movimientos" data-seccion="movimientos">Movimientos</a>
+      <a href="#clientes" data-seccion="clientes">Clientes</a>
+      <a href="#estadisticas" data-seccion="estadisticas">Estadísticas</a>
+      <a href="#ajustes" data-seccion="ajustes">Ajustes</a>
+    </nav>
+
+    <section class="cambioClave" id="cambioClave" hidden aria-labelledby="tituloCambioClave">
+      <form id="formCambioClave" novalidate>
+        <h2 id="tituloCambioClave">Cambiar contraseña</h2>
+        <div class="camposFila">
+          <div class="campo">
+            <label for="claveNueva">Contraseña nueva</label>
+            <div class="claveCampo">
+              <input type="password" id="claveNueva" autocomplete="new-password" minlength="8" required>
+              <button type="button" class="verClave" aria-label="Mostrar contraseña" aria-pressed="false">
+            <svg class="ojoAbierto" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+            <svg class="ojoCerrado" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 5.1A10.7 10.7 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-2.6 3.5M6.6 6.6C3.7 8.4 2 12 2 12s3.6 7 10 7c1.9 0 3.6-.6 5-1.5M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+            </div>
+            <p class="ayuda">Mínimo 8 caracteres.</p>
+          </div>
+          <div class="campo">
+            <label for="claveRepetida">Repetila</label>
+            <div class="claveCampo">
+              <input type="password" id="claveRepetida" autocomplete="new-password" required>
+              <button type="button" class="verClave" aria-label="Mostrar contraseña" aria-pressed="false">
+            <svg class="ojoAbierto" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="1.8"/></svg>
+            <svg class="ojoCerrado" viewBox="0 0 24 24" aria-hidden="true"><path d="M10.6 5.1A10.7 10.7 0 0 1 12 5c6.4 0 10 7 10 7a17.6 17.6 0 0 1-2.6 3.5M6.6 6.6C3.7 8.4 2 12 2 12s3.6 7 10 7c1.9 0 3.6-.6 5-1.5M9.9 9.9a3 3 0 0 0 4.2 4.2M3 3l18 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+            </div>
+          </div>
+        </div>
+        <p class="error" id="errorCambioClave" hidden></p>
+        <div class="cambioClaveAcciones">
+          <button type="button" class="btnTexto" id="btnCancelarClave">Cancelar</button>
+          <button type="submit" class="btn btnPrimario" id="btnGuardarClave">Guardar contraseña</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Stock, ventas, clientes, estadísticas y ajustes (stock.js) -->
+    <div id="vistaGestion"></div>
+
+    <div id="vistaEquipos" hidden>
+    <div class="adminTop">
+      <div>
+        <h1>Equipos</h1>
+        <p class="adminResumen" id="resumen">Cargando…</p>
+      </div>
+      <button class="btn btnPrimario" id="btnNuevo" type="button">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M10 4v12M4 10h12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        Cargar equipo
+      </button>
+    </div>
+
+    <!-- Equipos que quedaron guardados en este navegador con la versión anterior del admin -->
+    <section class="importar" id="importar" hidden>
+      <p id="importarTexto"></p>
+      <div class="importarAcciones">
+        <button type="button" class="btnTexto" id="btnIgnorarImportar">Ahora no</button>
+        <button type="button" class="btn btnPrimario" id="btnImportar">Subirlos</button>
+      </div>
+    </section>
+
+    <div class="adminLayout">
+      <section class="lista" aria-labelledby="tituloLista">
+        <div class="listaBarra">
+          <h2 id="tituloLista" class="visualmenteOculto">Listado de equipos</h2>
+          <label class="buscador">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m13.5 13.5 3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+            <span class="visualmenteOculto">Buscar equipo</span>
+            <input type="search" id="buscar" placeholder="Buscar por modelo, color o capacidad" autocomplete="off">
+          </label>
+          <div class="filtros" role="group" aria-label="Filtrar por estado">
+            <button type="button" class="filtro activo" data-filtro="todos">Todos</button>
+            <button type="button" class="filtro" data-filtro="disponible">Disponibles</button>
+            <button type="button" class="filtro" data-filtro="reservado">Reservados</button>
+            <button type="button" class="filtro" data-filtro="vendido">Vendidos</button>
+          </div>
+        </div>
+        <ul class="filas" id="filas"></ul>
+        <p class="listaVacia" id="listaVacia" hidden></p>
+      </section>
+
+      <section class="editor" id="editor" aria-labelledby="tituloEditor" hidden>
+        <div class="editorCabecera">
+          <h2 id="tituloEditor">Cargar equipo</h2>
+          <button type="button" class="btnIconoAdmin" id="btnCerrarEditor" aria-label="Cerrar">
+            <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+          </button>
+        </div>
+
+        <form id="form" novalidate>
+          <div class="fotoCampo">
+            <div class="fotoVista" id="fotoVista"></div>
+            <div class="fotoAcciones">
+              <label class="btnSecundario">
+                <input type="file" id="foto" accept="image/*" class="visualmenteOculto">
+                Subir foto
+              </label>
+              <button type="button" class="btnTexto" id="btnQuitarFoto" hidden>Quitar foto</button>
+              <p class="ayuda">Opcional. Si no subís foto, mostramos un dibujo del equipo en su color.</p>
+            </div>
+          </div>
+
+          <div class="campo">
+            <label for="modelo">Modelo</label>
+            <input id="modelo" name="modelo" list="modelos" placeholder="iPhone 13 Pro" required autocomplete="off">
+            <p class="error" id="errorModelo" hidden>Escribí el modelo del equipo.</p>
+          </div>
+
+          <div class="camposFila">
+            <div class="campo">
+              <label for="capacidad">Capacidad</label>
+              <select id="capacidad" name="capacidad">
+                <option>64 GB</option>
+                <option selected>128 GB</option>
+                <option>256 GB</option>
+                <option>512 GB</option>
+                <option>1 TB</option>
+              </select>
+            </div>
+            <div class="campo">
+              <label for="color">Color</label>
+              <input id="color" name="color" list="colores" placeholder="Azul" autocomplete="off">
+            </div>
+          </div>
+
+          <div class="camposFila">
+            <div class="campo">
+              <label for="condicion">Condición</label>
+              <select id="condicion" name="condicion"></select>
+            </div>
+            <div class="campo">
+              <label for="bateria">Batería (%)</label>
+              <input id="bateria" name="bateria" type="number" inputmode="numeric" min="1" max="100" placeholder="90">
+              <p class="error" id="errorBateria" hidden>Tiene que ser un número entre 1 y 100.</p>
+            </div>
+          </div>
+
+          <div class="camposFila camposPrecio">
+            <div class="campo">
+              <label for="precio">Precio</label>
+              <input id="precio" name="precio" type="text" inputmode="numeric" placeholder="450.000" autocomplete="off">
+              <p class="error" id="errorPrecio" hidden>Escribí el precio en números.</p>
+            </div>
+            <div class="campo">
+              <label for="moneda">Moneda</label>
+              <select id="moneda" name="moneda">
+                <option value="ARS">Pesos</option>
+                <option value="USD">Dólares</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="campo">
+            <label for="detalle">Detalle <span class="opcional">opcional</span></label>
+            <textarea id="detalle" name="detalle" rows="2" maxlength="140" placeholder="Ej: con caja original, pantalla impecable"></textarea>
+          </div>
+
+          <fieldset class="campo">
+            <legend>Estado</legend>
+            <div class="segmentado">
+              <label><input type="radio" name="estado" value="disponible" checked><span>Disponible</span></label>
+              <label><input type="radio" name="estado" value="reservado"><span>Reservado</span></label>
+              <label><input type="radio" name="estado" value="vendido"><span>Vendido</span></label>
+            </div>
+            <p class="ayuda">Los vendidos no se muestran en el sitio, pero quedan acá por si querés volver a publicarlos.</p>
+          </fieldset>
+
+          <div class="editorAcciones">
+            <button type="button" class="btnTexto btnPeligro" id="btnEliminar" hidden>Eliminar equipo</button>
+            <button type="submit" class="btn btnPrimario" id="btnGuardar">Guardar</button>
+          </div>
+        </form>
+      </section>
+    </div>
+    </div>
+  </main>
+
+  <!-- Ventana para formularios de stock, ventas y clientes -->
+  <dialog class="modal" id="modal" aria-label="Formulario"></dialog>
+
+  <div class="aviso" id="aviso" role="status" aria-live="polite" hidden>
+    <span id="avisoTexto"></span>
+    <button type="button" class="avisoAccion" id="avisoAccion" hidden>Deshacer</button>
+  </div>
+
+  <datalist id="modelos">
+    <option>iPhone 11</option><option>iPhone 11 Pro</option><option>iPhone 11 Pro Max</option>
+    <option>iPhone SE (2022)</option>
+    <option>iPhone 12</option><option>iPhone 12 mini</option><option>iPhone 12 Pro</option><option>iPhone 12 Pro Max</option>
+    <option>iPhone 13</option><option>iPhone 13 mini</option><option>iPhone 13 Pro</option><option>iPhone 13 Pro Max</option>
+    <option>iPhone 14</option><option>iPhone 14 Plus</option><option>iPhone 14 Pro</option><option>iPhone 14 Pro Max</option>
+    <option>iPhone 15</option><option>iPhone 15 Plus</option><option>iPhone 15 Pro</option><option>iPhone 15 Pro Max</option>
+    <option>iPhone 16e</option><option>iPhone 16</option><option>iPhone 16 Plus</option><option>iPhone 16 Pro</option><option>iPhone 16 Pro Max</option>
+    <option>iPhone 17</option><option>iPhone Air</option><option>iPhone 17 Pro</option><option>iPhone 17 Pro Max</option>
+  </datalist>
+
+  <datalist id="colores">
+    <option>Negro</option><option>Blanco</option><option>Azul</option><option>Rojo</option><option>Verde</option>
+    <option>Rosa</option><option>Púrpura</option><option>Amarillo</option><option>Medianoche</option><option>Blanco estelar</option>
+    <option>Grafito</option><option>Plata</option><option>Dorado</option><option>Azul sierra</option><option>Verde alpino</option>
+    <option>Titanio natural</option><option>Titanio negro</option><option>Titanio blanco</option><option>Titanio azul</option>
+    <option>Titanio desierto</option><option>Naranja cósmico</option><option>Azul profundo</option><option>Lavanda</option><option>Salvia</option>
+  </datalist>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+  <script src="supabase-config.js"></script>
+  <script src="productos.js"></script>
+  <script src="admin.js"></script>
+  <script src="stock.js"></script>
+</body>
+</html>

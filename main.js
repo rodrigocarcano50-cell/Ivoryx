@@ -134,23 +134,84 @@ revisarScroll();
 
 
 // ===============================
-// ANIMACIÓN DE ELEMENTOS AL APARECER
+// EQUIPOS DISPONIBLES (se leen de Supabase)
 // ===============================
-const elementosRevelar = document.querySelectorAll('.revelar');
+const equiposGrid = document.getElementById('equiposGrid');
+const equiposEstado = document.getElementById('equiposEstado');
 
-if ('IntersectionObserver' in window) {
-  const observer = new IntersectionObserver((entradas) => {
-    entradas.forEach(entrada => {
-      if (entrada.isIntersecting) {
-        const el = entrada.target;
-        el.classList.add('visible');
-        el.addEventListener('transitionend', () => el.classList.add('listo'), { once: true });
-        observer.unobserve(el);
-      }
-    });
-  }, { threshold: 0.15 });
+function tarjetaEquipo(p, orden) {
+  const reservado = p.estado === 'reservado';
+  const nombre = Ivoryx.titulo(p);
+  const foto = p.imagen
+    ? `<img src="${Ivoryx.escapar(p.imagen)}" alt="${Ivoryx.escapar(nombre)} ${Ivoryx.escapar(p.color)}" loading="lazy">`
+    : Ivoryx.dibujoIphone(p);
 
-  elementosRevelar.forEach(el => observer.observe(el));
-} else {
-  elementosRevelar.forEach(el => el.classList.add('visible'));
+  const bateria = Number(p.bateria) > 0 ? Math.min(100, Number(p.bateria)) : null;
+  const datos = [
+    p.condicion && `<div><dt>Condición</dt><dd>${Ivoryx.escapar(p.condicion)}</dd></div>`,
+    bateria && `<div><dt>Batería</dt><dd><span class="bateria${bateria < 80 ? ' bateriaBaja' : ''}" aria-hidden="true"><span style="width:${bateria}%"></span></span>${bateria}%</dd></div>`
+  ].filter(Boolean).join('');
+
+  const mensaje = reservado
+    ? `Hola! Vi que el ${nombre} ${p.color || ''} está reservado. ¿Tenés algo parecido?`
+    : `Hola! Me interesa el ${nombre} ${p.color || ''} que vi en la web (${Ivoryx.precio(p)}). ¿Sigue disponible?`;
+
+  return `
+    <article class="equipo${reservado ? ' equipoReservado' : ''}" style="--orden:${orden}">
+      <div class="equipoFoto">
+        ${foto}
+        ${reservado ? '<span class="equipoMarca">Reservado</span>' : ''}
+      </div>
+      <div class="equipoInfo">
+        <h3>${Ivoryx.escapar(p.modelo)}</h3>
+        <p class="equipoSpecs">${[p.capacidad, p.color].filter(Boolean).map(Ivoryx.escapar).join(' · ')}</p>
+        ${datos ? `<dl class="equipoDatos">${datos}</dl>` : ''}
+        ${p.detalle ? `<p class="equipoDetalle">${Ivoryx.escapar(p.detalle)}</p>` : ''}
+        <div class="equipoPie">
+          <span class="equipoPrecio">${Ivoryx.precio(p)}</span>
+          <a class="equipoCta" href="${Ivoryx.enlaceWhatsapp(mensaje)}" target="_blank" rel="noopener">
+            ${reservado ? 'Pedir similar' : 'Consultar'}
+          </a>
+        </div>
+      </div>
+    </article>`;
 }
+
+async function mostrarEquipos() {
+  let lista;
+  try {
+    lista = await Ivoryx.cargar();
+  } catch (error) {
+    console.error(error);
+    equiposEstado.innerHTML = 'No pudimos cargar los equipos. <a href="https://wa.me/5492617501979" target="_blank" rel="noopener">Consultá el stock por WhatsApp</a>.';
+    return;
+  }
+
+  const productos = lista
+    .filter(p => p.estado !== 'vendido')
+    // Primero los disponibles, después por precio
+    .sort((a, b) => (a.estado === 'reservado') - (b.estado === 'reservado') || (a.precio || 0) - (b.precio || 0));
+
+  if (productos.length === 0) {
+    equiposEstado.textContent = 'Ahora mismo estamos renovando el stock. Escribinos y te contamos qué equipos entran esta semana.';
+    return;
+  }
+
+  equiposEstado.hidden = true;
+  equiposGrid.innerHTML = productos.map(tarjetaEquipo).join('');
+  animarEquipos();
+}
+
+// Las tarjetas entran escalonadas la primera vez que la grilla aparece en pantalla
+function animarEquipos() {
+  if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const observer = new IntersectionObserver((entradas) => {
+    if (entradas[0].isIntersecting) {
+      equiposGrid.classList.add('entra');
+      observer.disconnect();
+    }
+  }, { threshold: 0.1 });
+  observer.observe(equiposGrid);
+}
+
+mostrarEquipos();
