@@ -1531,3 +1531,22 @@ section {
     animation: none;
   }
 }
+
+/* Con varias fotos, la imagen deja lugar abajo para los puntitos */
+.equipoFoto .carruselPista img {
+  padding-bottom: 34px;
+}
+
+.accFoto .carruselPista img {
+  padding-bottom: 26px;
+}
+
+.detalleFoto .carruselPista img {
+  padding-bottom: 44px;
+}
+
+@media (max-width: 600px) {
+  .accFoto .carruselPista img {
+    padding-bottom: 22px;
+  }
+}
