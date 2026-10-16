@@ -517,7 +517,7 @@ const Gestion = (() => {
   }
 
   function herramientasCategoria(cat, extras = '') {
-    return `<div class="herramientas">
+    return `<div class="herramientas herramientasCategoria">
       ${extras}
       ${cat === 'Fundas' ? `
         ${boton('Crear modelos de fundas', 'crear-fundas', '', 'btnChico')}
@@ -1226,7 +1226,7 @@ const Gestion = (() => {
           hayOtros = true;
           html += `<p class="opcionesTitulo">Equipos</p>${equiposVenta.map((p) => `
             <button type="button" class="opcion" role="option" data-producto="${esc(p.id)}">
-              <span><span class="etiqueta ingreso">Equipo</span> <strong>${esc(p.nombre)}</strong>${p.color ? ` · ${esc(p.color)}` : ''}</span><small>${p.precio_venta ? $p(p.precio_venta) : 'en USD: poné el precio en $'}</small>
+              <span><span class="etiqueta ingreso">Equipo</span> <strong>${esc(p.nombre)}</strong>${p.color ? ` · ${esc(p.color)}` : ''}</span><small>${p.precio_venta ? $p(p.precio_venta) : 'precio en USD'}</small>
             </button>`).join('')}`;
         }
       }
@@ -2000,6 +2000,23 @@ const Gestion = (() => {
     mostrar();
     if (antes !== ruta.seccion) window.scrollTo({ top: 0 });
   });
+
+  // ---------- Tablas en celular ----------
+  // En pantallas angostas cada fila se ve como tarjeta: cada celda muestra arriba el nombre de su columna
+  function etiquetarTablas(raiz) {
+    raiz.querySelectorAll('table.tabla').forEach((tabla) => {
+      const titulos = [...tabla.querySelectorAll('thead th')].map((th) => (th.querySelector('.visualmenteOculto') ? '' : th.textContent.trim()));
+      tabla.querySelectorAll('tbody tr').forEach((tr) => {
+        [...tr.children].forEach((td, i) => td.setAttribute('data-label', titulos[i] || ''));
+      });
+    });
+  }
+  let etiquetando = false;
+  new MutationObserver(() => {
+    if (etiquetando) return;
+    etiquetando = true;
+    requestAnimationFrame(() => { etiquetando = false; etiquetarTablas(document.body); });
+  }).observe(document.body, { childList: true, subtree: true });
 
   // ---------- Arranque ----------
   async function iniciar() {

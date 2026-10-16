@@ -291,8 +291,8 @@ section {
   .barraLinks {
     position: absolute;
     top: 72px;
-    left: -24px;
-    right: -24px;
+    left: 0;
+    right: 0;
     flex-direction: column;
     align-items: stretch;
     gap: 0;
@@ -957,6 +957,58 @@ section {
 
 
 
+
+/* En celular cada accesorio es una fila: foto a la izquierda, datos a la derecha */
+@media (max-width: 600px) {
+  .accGrid {
+    gap: 12px;
+  }
+
+  .acc {
+    flex-direction: row;
+    border-radius: 18px;
+  }
+
+  .accFoto {
+    flex: none;
+    width: 112px;
+    aspect-ratio: auto;
+    border-bottom: 0;
+    border-right: 1px solid var(--borde);
+  }
+
+  .accFoto img {
+    padding: 10px;
+  }
+
+  .accInfo {
+    min-width: 0;
+    padding: 14px 14px 14px 16px;
+  }
+
+  .accInfo h3 {
+    font-size: 17px;
+  }
+
+  .accDescripcion {
+    font-size: 13px;
+  }
+
+  .accInfo .equipoPie {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 10px;
+  }
+
+  .accPrecio {
+    font-size: 18px;
+  }
+
+  .accInfo .equipoCta {
+    padding: 8px 14px;
+    font-size: 14px;
+  }
+}
 
 .accGrid.entra .acc {
   animation: subir 0.9s var(--salida) both;

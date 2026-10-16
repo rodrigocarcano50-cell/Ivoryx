@@ -2050,10 +2050,6 @@ code {
     gap: 8px;
   }
 
-  /* El logo ya lleva al sitio */
-  .adminVolver {
-    display: none;
-  }
 
   .modalPie {
     gap: 8px;
@@ -2278,4 +2274,293 @@ code {
 
 .seguimientoBotones .btnVendido {
   margin-right: 0;
+}
+
+/* ================= Celular ================= */
+.textoCorto {
+  display: none;
+}
+
+.accesoVolver {
+  display: block;
+  margin-top: 18px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--azul);
+  text-decoration: none;
+}
+
+.accesoVolver:hover {
+  text-decoration: underline;
+}
+
+@media (max-width: 640px) {
+  .barra .titulo {
+    font-size: 18px;
+    letter-spacing: 0.14em;
+  }
+
+  .adminNav {
+    gap: 10px;
+  }
+
+  .adminNav .btnTexto,
+  .adminVolver {
+    font-size: 14px;
+  }
+
+  .textoLargo {
+    display: none;
+  }
+
+  .textoCorto {
+    display: inline;
+  }
+
+  .acceso {
+    align-items: start;
+    padding-top: 40px;
+  }
+
+  .accesoCaja {
+    padding: 28px 22px;
+  }
+
+  /* Datos del resumen: si queda uno solo en la fila, ocupa todo el ancho */
+  .datos > .dato:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+
+  .datoValor {
+    font-size: 24px;
+  }
+
+  /* Tablas como tarjetas */
+  .tablaScroll {
+    overflow: visible;
+  }
+
+  .tabla,
+  .tabla tbody {
+    display: block;
+  }
+
+  .tabla thead {
+    display: none;
+  }
+
+  .tabla tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 10px 14px;
+    padding: 14px 16px;
+    border-top: 1px solid var(--borde);
+  }
+
+  .tabla tbody tr:first-child {
+    border-top: 0;
+  }
+
+  .tabla td {
+    display: block;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    text-align: left;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .tabla td.num {
+    text-align: left;
+  }
+
+  .tabla td::before {
+    content: attr(data-label);
+    display: block;
+    margin-bottom: 2px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--gris);
+  }
+
+  .tabla td[data-label=""]::before {
+    display: none;
+  }
+
+  .tabla td:empty {
+    display: none;
+  }
+
+  /* La primera columna (producto, fecha o cliente), los productos de una venta y los botones van a lo ancho */
+  .tabla td:first-child,
+  .tabla td.productosOp,
+  .tabla td.acciones {
+    grid-column: 1 / -1;
+  }
+
+  .tabla td:first-child {
+    font-size: 15px;
+  }
+
+  .tabla td.acciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    padding-top: 4px;
+  }
+
+  .tabla td.acciones:empty {
+    display: none;
+  }
+
+  .productosOp > div {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+  }
+}
+
+@media (max-width: 640px) {
+  .adminVolver,
+  .adminNav .btnTexto {
+    white-space: nowrap;
+  }
+
+  /* Fecha y tipo de un movimiento en la misma línea */
+  .tabla td.nowrap:first-child {
+    grid-column: auto;
+  }
+
+  /* Filtros de movimientos de a dos */
+  .filtrosMov {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .filtrosMov > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}
+
+/* Lista de equipos en celular: datos arriba, botón abajo */
+@media (max-width: 640px) {
+  .filas li {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .fila {
+    grid-template-columns: 48px auto minmax(0, 1fr);
+    gap: 4px 10px;
+  }
+
+  .filaTexto {
+    grid-column: 2 / -1;
+    grid-row: 1;
+  }
+
+  .filaTexto strong {
+    white-space: normal;
+    overflow: visible;
+  }
+
+  .filaPrecio {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .estado {
+    grid-column: 3;
+    grid-row: 2;
+    justify-self: start;
+    align-self: center;
+  }
+
+  .filas li > :not(.fila) {
+    align-self: flex-start;
+    margin: -4px 14px 12px 72px;
+  }
+
+  .seguimientoBotones {
+    justify-content: flex-start;
+  }
+
+  .seguimientoFalta {
+    max-width: none;
+    text-align: left;
+  }
+}
+
+/* Las barras que se deslizan de costado no muestran la barrita de scroll */
+.filtros,
+.pestanas {
+  scrollbar-width: none;
+}
+
+.filtros::-webkit-scrollbar,
+.pestanas::-webkit-scrollbar {
+  display: none;
+}
+
+/* Opciones del buscador de productos: el nombre puede ocupar dos líneas */
+.opcion > span:first-child {
+  white-space: normal;
+  overflow: visible;
+  line-height: 1.35;
+}
+
+.opcion small {
+  flex: none;
+}
+
+/* Herramientas de cada categoría en celular: una sola fila que se desliza */
+@media (max-width: 640px) {
+  .herramientasCategoria {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    margin-left: -24px;
+    margin-right: -24px;
+    padding: 2px 24px 4px;
+    scrollbar-width: none;
+  }
+
+  .herramientasCategoria::-webkit-scrollbar {
+    display: none;
+  }
+
+  .herramientasCategoria > * {
+    flex: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .tabla tr {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px 12px;
+  }
+
+  .tabla td.nowrap:first-child {
+    grid-column: span 2;
+  }
+
+  /* Dentro de una caja la fila no necesita margen propio a los costados */
+  .caja .tabla tr {
+    padding-left: 0;
+    padding-right: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  /* El primer dato de cada tarjeta (producto, fecha o cliente) ya se entiende solo */
+  .tabla td:first-child::before {
+    display: none;
+  }
+
+  .tabla td:first-child {
+    font-weight: 600;
+  }
 }

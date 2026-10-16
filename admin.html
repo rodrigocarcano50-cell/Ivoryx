@@ -21,12 +21,12 @@
     <nav class="barra contenedor">
       <a href="index.html" class="titulo" aria-label="Ivoryx, ir al sitio">IVORYX</a>
       <div class="adminNav">
-        <a href="index.html" class="adminVolver">Ver sitio</a>
+        <a href="index.html" class="adminVolver"><span class="textoLargo">Ver sitio</span><span class="textoCorto" aria-hidden="true">← Sitio</span></a>
         <button type="button" class="btnIconoAdmin btnTema" id="btnTema" aria-label="Usar modo oscuro" aria-pressed="false">
           <svg class="iconoLuna" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5a8.5 8.5 0 1 0 10.7 10.7Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
           <svg class="iconoSol" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2.5v2M12 19.5v2M4.6 4.6l1.4 1.4M18 18l1.4 1.4M2.5 12h2M19.5 12h2M4.6 19.4 6 18M18 6l1.4-1.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
         </button>
-        <button type="button" class="btnTexto" id="btnCambiarClave" hidden>Contraseña</button>
+        <button type="button" class="btnTexto" id="btnCambiarClave" hidden><span class="textoLargo">Contraseña</span><span class="textoCorto">Clave</span></button>
         <button type="button" class="btnTexto" id="btnSalir" hidden>Salir</button>
       </div>
     </nav>
@@ -48,6 +48,7 @@
         <p class="error" id="errorClave" hidden></p>
       </div>
       <button type="submit" class="btn btnPrimario" id="btnIngresar">Ingresar</button>
+      <a href="index.html" class="accesoVolver">← Volver a la página</a>
     </form>
   </main>
 
