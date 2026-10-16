@@ -1244,7 +1244,8 @@ section {
 }
 
 .equipoFoto .carruselPista img,
-.accFoto .carruselPista img {
+.accFoto .carruselPista img,
+.detalleFoto .carruselPista img {
   position: relative;
   inset: auto;
   flex: 0 0 100%;
@@ -1291,4 +1292,242 @@ section {
 .accFoto .carruselPuntos span {
   width: 5px;
   height: 5px;
+}
+
+/* ================= Tarjetas que se abren en grande ================= */
+[data-detalle] {
+  cursor: pointer;
+}
+
+.tarjetaAbrir {
+  font: inherit;
+  letter-spacing: inherit;
+  color: inherit;
+  text-align: left;
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.tarjetaAbrir:focus-visible {
+  outline: 2px solid var(--azul);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.conDetalle,
+.conDetalle body {
+  overflow: hidden;
+}
+
+.conDetalle .whatsappFlotante {
+  display: none;
+}
+
+.detalle {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(3, 15, 46, 0.55);
+  animation: detalleFondo 0.25s ease;
+}
+
+.detalle[hidden] {
+  display: none;
+}
+
+.detallePanel {
+  width: 100%;
+  max-width: 980px;
+  max-height: calc(100vh - 48px);
+  max-height: calc(100dvh - 48px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--blanco);
+  border-radius: 28px;
+  box-shadow: 0 30px 80px rgba(3, 15, 46, 0.35);
+  animation: detalleEntra 0.4s var(--salida);
+}
+
+.detalleBarra {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 14px 16px 10px;
+  background: rgba(255, 255, 255, 0.92);
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
+}
+
+.detalleVolver {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--azul);
+  background: var(--grisClaro);
+  border: 0;
+  border-radius: 999px;
+  padding: 9px 18px 9px 10px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.detalleVolver:hover {
+  background: #e9e9ee;
+}
+
+.detalleVolver:focus-visible {
+  outline: 2px solid var(--azul);
+  outline-offset: 2px;
+}
+
+.detalleCuerpo {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr);
+  gap: 36px;
+  align-items: center;
+  padding: 6px 32px 36px;
+}
+
+.detalleFoto {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 22px;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse 70% 60% at 50% 60%, #ffffff, transparent 75%),
+    var(--grisClaro);
+}
+
+.detalleFoto > img {
+  position: absolute;
+  inset: 0;
+}
+
+.detalleFoto img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: 24px;
+}
+
+.detalleFoto .carruselPuntos {
+  bottom: 14px;
+  gap: 8px;
+}
+
+.detalleFoto .carruselPuntos span {
+  width: 8px;
+  height: 8px;
+}
+
+.equipoReservado .detalleFoto img,
+.equipoReservado .detalleFoto .equipoDibujo {
+  opacity: 0.55;
+}
+
+.detalleInfo h2 {
+  font-size: 32px;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+.detalleInfo .equipoSpecs {
+  font-size: 17px;
+}
+
+.detalleTexto {
+  margin-top: 16px;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--gris);
+}
+
+.detallePie {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 28px;
+  padding-top: 20px;
+  border-top: 1px solid var(--borde);
+}
+
+.detallePie .equipoPrecio,
+.detallePie .accPrecio {
+  font-size: 28px;
+}
+
+.detallePie .equipoCta {
+  font-size: 16px;
+  padding: 13px 22px;
+}
+
+@keyframes detalleFondo {
+  from { opacity: 0; }
+}
+
+@keyframes detalleEntra {
+  from { opacity: 0; transform: translateY(24px) scale(0.98); }
+}
+
+@media (max-width: 760px) {
+  .detalle {
+    padding: 0;
+    align-items: stretch;
+    background: var(--blanco);
+  }
+
+  .detallePanel {
+    max-width: none;
+    max-height: none;
+    height: 100%;
+    border-radius: 0;
+    box-shadow: none;
+    animation-name: detalleEntraCelular;
+  }
+
+  .detalleBarra {
+    padding: calc(10px + env(safe-area-inset-top)) 12px 8px;
+  }
+
+  .detalleCuerpo {
+    grid-template-columns: 1fr;
+    gap: 22px;
+    padding: 2px 16px calc(32px + env(safe-area-inset-bottom));
+  }
+
+  .detalleFoto {
+    border-radius: 20px;
+  }
+
+  .detalleInfo h2 {
+    font-size: 27px;
+  }
+
+  .detallePie .equipoCta {
+    flex: 1 1 100%;
+    text-align: center;
+  }
+}
+
+@keyframes detalleEntraCelular {
+  from { opacity: 0; transform: translateX(32px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .detalle,
+  .detallePanel {
+    animation: none;
+  }
 }
