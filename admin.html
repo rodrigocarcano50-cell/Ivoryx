@@ -151,17 +151,11 @@
         </div>
 
         <form id="form" novalidate>
-          <div class="fotoCampo">
-            <div class="fotoVista" id="fotoVista"></div>
-            <div class="fotoAcciones">
-              <label class="btnSecundario">
-                <input type="file" id="foto" accept="image/*" class="visualmenteOculto">
-                Subir foto
-              </label>
-              <button type="button" class="btnTexto" id="btnQuitarFoto" hidden>Quitar foto</button>
-              <p class="ayuda">Opcional. Si no subís foto, mostramos un dibujo del equipo en su color.</p>
-            </div>
-          </div>
+          <fieldset class="campo">
+            <legend>Fotos <span class="opcional">opcional</span></legend>
+            <div class="fotosEditor" id="fotosEquipo"></div>
+            <p class="ayuda">Podés subir varias: en el sitio se pasan deslizando con el dedo. La primera es la portada. Sin fotos, mostramos un dibujo del equipo en su color.</p>
+          </fieldset>
 
           <div class="campo">
             <label for="modelo">Modelo</label>

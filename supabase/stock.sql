@@ -373,3 +373,10 @@ create policy "solo admin" on public.seguimientos for all to authenticated
 -- Equipos vendidos que ya tuvieron su seguimiento: dejan de listarse en el admin
 -- (no se borran: la venta y el equipo quedan en el historial)
 alter table public.equipos add column if not exists archivado boolean not null default false;
+
+-- ---------- Varias fotos por equipo y por accesorio de la muestra ----------
+-- imagenes: todas las fotos en orden (la primera es la portada). imagen queda con la primera, por compatibilidad.
+alter table public.equipos add column if not exists imagenes text[] not null default '{}';
+alter table public.vitrina add column if not exists imagenes text[] not null default '{}';
+update public.equipos set imagenes = array[imagen] where imagen <> '' and cardinality(imagenes) = 0;
+update public.vitrina set imagenes = array[imagen] where imagen <> '' and cardinality(imagenes) = 0;

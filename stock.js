@@ -834,7 +834,7 @@ const Gestion = (() => {
               <span class="vitrinaFoto">${fotoVitrina(a) ? `<img src="${esc(fotoVitrina(a))}" alt="">` : '<span class="vitrinaSinFoto">Sin foto</span>'}</span>
               <span class="vitrinaTexto">
                 <strong>${esc(a.titulo)}</strong>
-                <span>${Number(a.precio) > 0 ? `desde ${$p(a.precio)}` : 'Sin precio'}${a.visible ? '' : ' · Oculto'}</span>
+                <span>${Number(a.precio) > 0 ? `desde ${$p(a.precio)}` : 'Sin precio'}${Ivoryx.fotos(a).length > 1 ? ` · ${Ivoryx.fotos(a).length} fotos` : ''}${a.visible ? '' : ' · Oculto'}</span>
                 ${a.imagen ? '' : '<span class="vitrinaAviso">Foto de muestra: subí la tuya</span>'}
               </span>
             </button>
@@ -853,23 +853,16 @@ const Gestion = (() => {
   // a: tarjeta a editar; sin a, se agrega una nueva al final
   function formVitrina(a = null) {
     const nueva = !a;
-    const v = a || { titulo: '', descripcion: '', precio: null, mensaje: '', imagen: '', visible: true };
-    let fotoNueva = null;
-    let imagen = v.imagen;
+    const v = a || { titulo: '', descripcion: '', precio: null, mensaje: '', imagen: '', imagenes: [], visible: true };
+    let fotos = null; // editor de fotos, se arma al abrir
     abrirModal({
       titulo: nueva ? 'Agregar a la muestra' : `Editar ${esc(v.titulo)}`,
       cuerpo: `
-        <div class="fotoCampo">
-          <div class="fotoVista" id="vitFotoVista"></div>
-          <div class="fotoAcciones">
-            <label class="btnSecundario">
-              <input type="file" id="vitFoto" accept="image/*" class="visualmenteOculto">
-              Subir foto
-            </label>
-            <button type="button" class="btnTexto" id="vitQuitarFoto">Quitar foto</button>
-            <p class="ayuda">Una foto del accesorio, mejor con fondo blanco.</p>
-          </div>
-        </div>
+        <fieldset class="campo">
+          <legend>Fotos</legend>
+          <div class="fotosEditor" id="vitFotos"></div>
+          <p class="ayuda">Mejor con fondo blanco. Si subís varias, en la página se pasan deslizando con el dedo. La primera es la portada.</p>
+        </fieldset>
         <div class="campo">
           <label for="vitTitulo">Nombre</label>
           <input id="vitTitulo" value="${esc(v.titulo)}" placeholder="Ej: Funda de silicona" autocomplete="off">
@@ -891,26 +884,11 @@ const Gestion = (() => {
       pie: `<button type="button" class="btnTexto" data-cerrar>Cancelar</button>
             <button type="submit" class="btn btnPrimario">${nueva ? 'Agregar' : 'Guardar'}</button>`,
       alMontar: (form) => {
-        const vista = form.querySelector('#vitFotoVista');
-        const quitar = form.querySelector('#vitQuitarFoto');
-        const dibujar = () => {
-          const url = fotoNueva ? URL.createObjectURL(fotoNueva) : fotoVitrina({ ...v, imagen });
-          vista.innerHTML = url ? `<img src="${esc(url)}" alt="">` : '<span class="vitrinaSinFoto">Sin foto</span>';
-          quitar.hidden = !fotoNueva && !imagen;
-        };
-        form.querySelector('#vitFoto').addEventListener('change', async (e) => {
-          const archivo = e.target.files[0];
-          e.target.value = '';
-          if (!archivo) return;
-          try {
-            fotoNueva = await achicarImagen(archivo); // de admin.js
-            dibujar();
-          } catch {
-            avisar('No pudimos abrir esa imagen. Probá con una foto JPG o PNG.');
-          }
+        // de admin.js; sin fotos propias se ve la de muestra
+        fotos = editorFotos(form.querySelector('#vitFotos'), {
+          vacio: () => (FOTOS_VITRINA[v.id] ? `<img src="${esc(FOTOS_VITRINA[v.id])}" alt=""><span class="fotosPortada">De muestra</span>` : '<span class="vitrinaSinFoto">Sin foto</span>')
         });
-        quitar.addEventListener('click', () => { fotoNueva = null; imagen = ''; dibujar(); });
-        dibujar();
+        fotos.poner(Ivoryx.fotos(v));
         form.querySelector('#vitTitulo').focus();
       },
       alEnviar: async (form, fallo) => {
@@ -921,13 +899,13 @@ const Gestion = (() => {
           descripcion: valor('#vitDescripcion') || null,
           precio: valor('#vitPrecio') === '' ? null : Number(valor('#vitPrecio')),
           mensaje: valor('#vitMensaje') || `Hola! Quería consultar por ${titulo.charAt(0).toLowerCase() + titulo.slice(1)}. Mi iPhone es: `,
-          visible: form.querySelector('#vitVisible').checked,
-          imagen
+          visible: form.querySelector('#vitVisible').checked
         };
         if (!titulo) return fallo('Escribí el nombre del accesorio.');
         if (fila.precio !== null && !(fila.precio >= 0)) return fallo('El precio tiene que ser un número.');
-        if (!fotoNueva && !fotoVitrina({ ...v, imagen })) return fallo('Subí una foto del accesorio.');
-        if (fotoNueva) fila.imagen = await subirFoto(fotoNueva); // de admin.js
+        if (!fotos.lista().length && !FOTOS_VITRINA[v.id]) return fallo('Subí al menos una foto del accesorio.');
+        fila.imagenes = await fotos.subir();
+        fila.imagen = fila.imagenes[0] || '';
         if (nueva) fila.orden = Math.max(0, ...datos.vitrina.map((x) => x.orden || 0)) + 1;
         const { error } = nueva
           ? await db.from('vitrina').insert(fila)

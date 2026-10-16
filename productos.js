@@ -108,6 +108,9 @@ const Ivoryx = (() => {
   }
 
   // Los visitantes solo reciben disponibles y reservados; el admin logueado recibe todos
+  // Fotos de un equipo o accesorio: la lista de fotos, o la foto única de antes
+  const fotos = (p) => (p.imagenes?.length ? p.imagenes : p.imagen ? [p.imagen] : []);
+
   async function cargar() {
     const { data, error } = await db.from(TABLA).select('*').order('creado', { ascending: false });
     if (error) throw error;
@@ -123,5 +126,5 @@ const Ivoryx = (() => {
     }
   }
 
-  return { db, TABLA, BUCKET_FOTOS, WHATSAPP, CLAVE_BORRADOR, leerBorrador, CONDICIONES, ESTADOS, colorDe, dibujoIphone, escapar, precio, titulo, enlaceWhatsapp, cargar };
+  return { db, TABLA, BUCKET_FOTOS, WHATSAPP, CLAVE_BORRADOR, leerBorrador, CONDICIONES, ESTADOS, colorDe, dibujoIphone, escapar, precio, titulo, enlaceWhatsapp, fotos, cargar };
 })();

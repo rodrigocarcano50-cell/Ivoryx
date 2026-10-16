@@ -30,12 +30,57 @@ revisarScroll();
 const equiposGrid = document.getElementById('equiposGrid');
 const equiposEstado = document.getElementById('equiposEstado');
 
+// Una foto sola, o un carrusel que se pasa deslizando con el dedo si hay varias
+function fotosTarjeta(urls, alt) {
+  const img = (u, extra = '') => `<img src="${Ivoryx.escapar(u)}" alt="${Ivoryx.escapar(alt)}${extra}" loading="lazy" draggable="false">`;
+  if (urls.length < 2) return img(urls[0]);
+  return `
+    <div class="carrusel">
+      <div class="carruselPista" tabindex="0" aria-label="${urls.length} fotos: deslizá para verlas">
+        ${urls.map((u, i) => img(u, ` (foto ${i + 1} de ${urls.length})`)).join('')}
+      </div>
+      <div class="carruselPuntos" aria-hidden="true">
+        ${urls.map((_, i) => `<span${i === 0 ? ' class="activo"' : ''}></span>`).join('')}
+      </div>
+    </div>`;
+}
+
+// Los puntitos siguen a la foto que se está viendo
+document.addEventListener('scroll', (e) => {
+  const pista = e.target;
+  if (!pista.classList?.contains('carruselPista')) return;
+  const actual = Math.round(pista.scrollLeft / pista.clientWidth);
+  pista.nextElementSibling.querySelectorAll('span').forEach((punto, i) => punto.classList.toggle('activo', i === actual));
+}, true);
+
+// En la compu también se puede arrastrar con el mouse
+document.addEventListener('pointerdown', (e) => {
+  const pista = e.target.closest('.carruselPista');
+  if (!pista || e.pointerType !== 'mouse' || e.button !== 0) return;
+  e.preventDefault();
+  const inicioX = e.clientX;
+  const inicioScroll = pista.scrollLeft;
+  pista.classList.add('arrastrando');
+  const mover = (ev) => { pista.scrollLeft = inicioScroll - (ev.clientX - inicioX); };
+  const soltar = (ev) => {
+    document.removeEventListener('pointermove', mover);
+    document.removeEventListener('pointerup', soltar);
+    const ancho = pista.clientWidth;
+    const dx = ev.clientX - inicioX;
+    // Con un arrastre corto alcanza para pasar a la foto siguiente o anterior
+    const destino = Math.abs(dx) > ancho * 0.15 ? Math.round(inicioScroll / ancho) - Math.sign(dx) : Math.round(inicioScroll / ancho);
+    pista.classList.remove('arrastrando');
+    pista.scrollTo({ left: destino * ancho, behavior: 'smooth' });
+  };
+  document.addEventListener('pointermove', mover);
+  document.addEventListener('pointerup', soltar);
+});
+
 function tarjetaEquipo(p, orden) {
   const reservado = p.estado === 'reservado';
   const nombre = Ivoryx.titulo(p);
-  const foto = p.imagen
-    ? `<img src="${Ivoryx.escapar(p.imagen)}" alt="${Ivoryx.escapar(nombre)} ${Ivoryx.escapar(p.color)}" loading="lazy">`
-    : Ivoryx.dibujoIphone(p);
+  const urls = Ivoryx.fotos(p);
+  const foto = urls.length ? fotosTarjeta(urls, `${nombre} ${p.color || ''}`.trim()) : Ivoryx.dibujoIphone(p);
 
   const bateria = Number(p.bateria) > 0 ? Math.min(100, Number(p.bateria)) : null;
   const datos = [
@@ -109,7 +154,7 @@ mostrarEquipos();
 
 
 // ===============================
-// ACCESORIOS (las tarjetas se editan en el admin: "Accesorios en la web")
+// ACCESORIOS (las tarjetas se editan en el admin: Stock de accesorios → Muestra)
 // ===============================
 const accGrid = document.getElementById('accGrid');
 const accEstado = document.getElementById('accEstado');
@@ -118,11 +163,11 @@ const accEstado = document.getElementById('accEstado');
 const ACC_FOTOS = { silicona: 'funda.png', magsafe: 'funda.png', cargador: 'cargador.png', airpods: 'airpods.gif', templados: 'protector.webp' };
 
 function tarjetaAccesorio(a, orden) {
-  const foto = a.imagen || ACC_FOTOS[a.id] || 'cargador.png';
+  const urls = Ivoryx.fotos(a);
   const precio = Number(a.precio) > 0 ? Ivoryx.precio({ precio: Number(a.precio), moneda: 'ARS' }) : '';
   return `
     <article class="acc" style="--orden:${orden}">
-      <div class="accFoto"><img src="${Ivoryx.escapar(foto)}" alt="${Ivoryx.escapar(a.titulo)}" loading="lazy"></div>
+      <div class="accFoto">${fotosTarjeta(urls.length ? urls : [ACC_FOTOS[a.id] || 'cargador.png'], a.titulo)}</div>
       <div class="accInfo">
         <h3>${Ivoryx.escapar(a.titulo)}</h3>
         ${a.descripcion ? `<p class="accDescripcion">${Ivoryx.escapar(a.descripcion)}</p>` : ''}
@@ -135,7 +180,7 @@ function tarjetaAccesorio(a, orden) {
 }
 
 async function mostrarAccesorios() {
-  const { data, error } = await Ivoryx.db.from('vitrina').select('id, titulo, descripcion, precio, mensaje, imagen').order('orden');
+  const { data, error } = await Ivoryx.db.from('vitrina').select('id, titulo, descripcion, precio, mensaje, imagen, imagenes').order('orden');
   if (error || !data.length) {
     if (error) console.error(error);
     accEstado.innerHTML = 'Consultá los accesorios disponibles <a href="https://wa.me/5492617501979" target="_blank" rel="noopener">por WhatsApp</a>.';

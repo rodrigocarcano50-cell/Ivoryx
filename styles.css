@@ -1216,3 +1216,79 @@ section {
     transition: none !important;
   }
 }
+
+/* ================= Carrusel de fotos (se pasa deslizando) ================= */
+.carrusel {
+  position: absolute;
+  inset: 0;
+}
+
+.carruselPista {
+  display: flex;
+  height: 100%;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  cursor: grab;
+  touch-action: pan-x pan-y;
+}
+
+.carruselPista::-webkit-scrollbar {
+  display: none;
+}
+
+.carruselPista.arrastrando {
+  scroll-snap-type: none;
+  cursor: grabbing;
+}
+
+.equipoFoto .carruselPista img,
+.accFoto .carruselPista img {
+  position: relative;
+  inset: auto;
+  flex: 0 0 100%;
+  scroll-snap-align: center;
+  scroll-snap-stop: always;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.carruselPista:focus-visible {
+  outline: 2px solid var(--azul);
+  outline-offset: -2px;
+}
+
+.carruselPuntos {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 10px;
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  pointer-events: none;
+}
+
+.carruselPuntos span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.22);
+  transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.carruselPuntos span.activo {
+  background: rgba(0, 0, 0, 0.65);
+  transform: scale(1.2);
+}
+
+.accFoto .carruselPuntos {
+  bottom: 6px;
+  gap: 4px;
+}
+
+.accFoto .carruselPuntos span {
+  width: 5px;
+  height: 5px;
+}

@@ -8,8 +8,6 @@ const db = Ivoryx.db;
 
 let productos = [];
 let editandoId = null;
-let fotoActual = '';      // URL de la foto guardada
-let fotoNueva = null;     // Blob de una foto recién elegida, se sube al guardar
 let filtro = 'todos';
 
 const $ = (id) => document.getElementById(id);
@@ -227,10 +225,8 @@ function abrirEditor(id = null) {
   $('costo').value = costo ? new Intl.NumberFormat('es-AR').format(costo) : '';
   $('detalle').value = p.detalle || '';
   form.querySelector(`input[name="estado"][value="${p.estado || 'disponible'}"]`).checked = true;
-  fotoActual = p.imagen || '';
-  fotoNueva = null;
+  fotosEquipo.poner(Ivoryx.fotos(p));
   limpiarErrores();
-  mostrarFoto();
 
   editor.hidden = false;
   document.body.classList.add('editando');
@@ -242,7 +238,7 @@ function abrirEditor(id = null) {
 function cerrarEditor() {
   editor.hidden = true;
   editandoId = null;
-  fotoNueva = null;
+  fotosEquipo.poner([]);
   document.body.classList.remove('editando');
   render();
 }
@@ -264,8 +260,7 @@ function datosDelEquipo() {
     precio: Number($('precio').value.replace(/\D/g, '')) || null,
     moneda: $('moneda').value,
     detalle: $('detalle').value.trim(),
-    estado: form.querySelector('input[name="estado"]:checked').value,
-    imagen: fotoActual
+    estado: form.querySelector('input[name="estado"]:checked').value
   };
 }
 
@@ -315,7 +310,8 @@ form.addEventListener('submit', async (e) => {
   boton.textContent = 'Guardando…';
 
   try {
-    if (fotoNueva) datos.imagen = await subirFoto(fotoNueva);
+    datos.imagenes = await fotosEquipo.subir();
+    datos.imagen = datos.imagenes[0] || '';
 
     // El id se arma acá para poder guardar el costo del equipo nuevo
     const id = editandoId || crypto.randomUUID();
@@ -359,14 +355,7 @@ $('btnEliminar').addEventListener('click', async () => {
   });
 });
 
-// ---------- Foto: se achica antes de subirla ----------
-function mostrarFoto() {
-  const vista = $('fotoVista');
-  const url = fotoNueva ? URL.createObjectURL(fotoNueva) : fotoActual;
-  vista.innerHTML = url ? `<img src="${url}" alt="Foto del equipo">` : Ivoryx.dibujoIphone(datosDelEquipo());
-  $('btnQuitarFoto').hidden = !url;
-}
-
+// ---------- Fotos: se achican antes de subirlas ----------
 function achicarImagen(origen, lado = 1000) {
   return new Promise((resolver, rechazar) => {
     const img = new Image();
@@ -383,26 +372,74 @@ function achicarImagen(origen, lado = 1000) {
   });
 }
 
-$('foto').addEventListener('change', async (e) => {
-  const archivo = e.target.files[0];
-  e.target.value = '';
-  if (!archivo) return;
-  try {
-    fotoNueva = await achicarImagen(archivo);
-    mostrarFoto();
-  } catch {
-    avisar('No pudimos abrir esa imagen. Probá con una foto JPG o PNG.');
-  }
-});
+// Editor de varias fotos (equipos y muestra de accesorios). La primera es la portada.
+// Cada foto es la URL de una ya subida o el Blob de una nueva, que se sube al guardar.
+// vacio(): lo que se ve cuando no hay ninguna foto
+function editorFotos(raiz, { vacio } = {}) {
+  let fotos = [];
+  const urlDe = (f) => (typeof f === 'string' ? f : (f.vista ||= URL.createObjectURL(f)));
 
-$('btnQuitarFoto').addEventListener('click', () => {
-  fotoActual = '';
-  fotoNueva = null;
-  mostrarFoto();
-});
+  function dibujar() {
+    raiz.innerHTML = `
+      <ul class="fotosLista">
+        ${fotos.length ? fotos.map((f, i) => `
+          <li class="fotosItem">
+            <img src="${Ivoryx.escapar(urlDe(f))}" alt="Foto ${i + 1}">
+            ${i === 0 ? '<span class="fotosPortada">Portada</span>' : `<button type="button" class="fotosMover" data-mover="${i}" aria-label="Mover la foto ${i + 1} un lugar antes" title="Mover antes">←</button>`}
+            <button type="button" class="fotosQuitar" data-quitar="${i}" aria-label="Quitar la foto ${i + 1}" title="Quitar">×</button>
+          </li>`).join('') : `<li class="fotosItem fotosVacio">${vacio ? vacio() : ''}</li>`}
+        <li>
+          <label class="fotosAgregar">
+            <input type="file" accept="image/*" multiple class="visualmenteOculto">
+            <span aria-hidden="true">+</span>
+            ${fotos.length ? 'Agregar más' : 'Subir fotos'}
+          </label>
+        </li>
+      </ul>`;
+  }
+
+  raiz.addEventListener('click', (e) => {
+    const quitar = e.target.closest('[data-quitar]');
+    const mover = e.target.closest('[data-mover]');
+    if (quitar) fotos.splice(Number(quitar.dataset.quitar), 1);
+    else if (mover) {
+      const i = Number(mover.dataset.mover);
+      [fotos[i - 1], fotos[i]] = [fotos[i], fotos[i - 1]];
+    } else return;
+    dibujar();
+  });
+
+  raiz.addEventListener('change', async (e) => {
+    const archivos = [...e.target.files];
+    e.target.value = '';
+    let fallidas = 0;
+    for (const archivo of archivos) {
+      try {
+        fotos.push(await achicarImagen(archivo));
+      } catch {
+        fallidas++;
+      }
+    }
+    dibujar();
+    if (fallidas) avisar(`No pudimos abrir ${fallidas === 1 ? 'una imagen' : `${fallidas} imágenes`}. Probá con fotos JPG o PNG.`);
+  });
+
+  return {
+    poner(lista) { fotos = [...lista]; dibujar(); },
+    lista: () => fotos,
+    redibujar: dibujar,
+    // Sube las fotos nuevas y devuelve todas las URLs en orden
+    async subir() {
+      fotos = await Promise.all(fotos.map((f) => (typeof f === 'string' ? f : subirFoto(f))));
+      return fotos;
+    }
+  };
+}
+
+const fotosEquipo = editorFotos($('fotosEquipo'), { vacio: () => Ivoryx.dibujoIphone(datosDelEquipo()) });
 
 // El dibujo de la vista previa sigue al modelo y al color mientras escribís
-['modelo', 'color'].forEach((id) => $(id).addEventListener('input', () => !fotoActual && !fotoNueva && mostrarFoto()));
+['modelo', 'color'].forEach((id) => $(id).addEventListener('input', () => !fotosEquipo.lista().length && fotosEquipo.redibujar()));
 
 // ---------- Importar equipos guardados con el admin anterior ----------
 function revisarImportacion() {
@@ -436,7 +473,8 @@ $('btnImportar').addEventListener('click', async () => {
         moneda: p.moneda === 'USD' ? 'USD' : 'ARS',
         detalle: p.detalle || p.descripcion || null,
         estado: ['disponible', 'reservado', 'vendido'].includes(p.estado) ? p.estado : 'disponible',
-        imagen
+        imagen,
+        imagenes: imagen ? [imagen] : []
       });
     }
     const { error } = await db.from(Ivoryx.TABLA).insert(filasNuevas);
