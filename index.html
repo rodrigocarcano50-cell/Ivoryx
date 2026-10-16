@@ -117,13 +117,14 @@
       <ol class="planPasos">
         <li class="planPaso">
           <span class="planNumero">1</span>
-          <h3>Evaluá tu dispositivo</h3>
-          <p>Completá nuestro formulario online para una evaluación sin compromiso.</p>
+          <h3>Contanos cómo es tu iPhone</h3>
+          <p>Mandanos por WhatsApp el modelo, color, capacidad, % de batería y si tiene algún detalle.</p>
+          <a class="planEnlace" href="https://wa.me/5492617501979?text=Hola!%20Quiero%20entregar%20mi%20iPhone%20en%20plan%20canje.%0AModelo%3A%20%0AColor%3A%20%0ACapacidad%3A%20%0A%25%20de%20bater%C3%ADa%3A%20%0ADetalles%3A%20" target="_blank" rel="noopener">Enviar los datos</a>
         </li>
         <li class="planPaso">
           <span class="planNumero">2</span>
           <h3>Recibí tu cotización</h3>
-          <p>Te damos un precio aproximado por tu equipo actual en tiempo real.</p>
+          <p>Te respondemos con lo que te tomamos por tu equipo actual.</p>
         </li>
         <li class="planPaso">
           <span class="planNumero">3</span>
@@ -141,40 +142,21 @@
 
 
   <section class="accesorios seccion" id="accesorios">
-    <div class="contenedor accesoriosGrid">
-      <div class="accesoriosTexto">
-        <h2>Todo para tu iPhone</h2>
-        <p>
-          Todo lo que necesitás para disfrutar tu iPhone: fundas, vidrios templados,
-          cargadores, cables y accesorios de audio compatibles y de calidad.
-        </p>
-        <ul class="accesoriosLista">
-          <li>Fundas</li>
-          <li>Vidrios templados</li>
-          <li>Cargadores</li>
-          <li>Cables</li>
-          <li>Audio</li>
-        </ul>
-        <a class="btn btnPrimario" target="_blank" rel="noopener" href="https://wa.me/5492617501979?text=Hola%20%F0%9F%91%8B%20Quer%C3%ADa%20consultar%20por%20accesorios%20disponibles%20para%20iPhone.%20%C2%BFPod%C3%A9s%20asesorarme%3F">Consultá disponibilidad</a>
+    <div class="contenedor">
+      <div class="encabezado">
+        <h2>Accesorios</h2>
+        <p>Fundas, vidrios templados, cargadores y AirPods. Consultanos por tu modelo y te decimos qué hay.</p>
       </div>
 
-      <div class="carruselMarco">
-        <div class="carruselBox">
-          <ul class="carrusel">
-            <li><img src="airpods.gif" alt="AirPods"></li>
-            <li><img src="cable.webp" alt="Cable USB-C a Lightning"></li>
-            <li><img src="funda.png" alt="Funda transparente con MagSafe"></li>
-            <li><img src="cargador.png" alt="Cargador USB-C"></li>
-            <li><img src="protector.webp" alt="Vidrio templado"></li>
-          </ul>
-        </div>
-        <button class="carruselFlecha carruselPrev" aria-label="Anterior">
-          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12 4 6 10l6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-        <button class="carruselFlecha carruselNext" aria-label="Siguiente">
-          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="m8 4 6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        </button>
-        <div class="carruselPuntos" aria-hidden="true"></div>
+      <p class="equiposEstado" id="accEstado" role="status">Cargando accesorios…</p>
+      <div class="accGrid" id="accGrid"></div>
+
+      <div class="equiposPie">
+        <p>¿No encontrás lo que buscás?</p>
+        <a href="https://wa.me/5492617501979?text=Hola!%20Quer%C3%ADa%20consultar%20por%20accesorios%20para%20iPhone." class="enlaceFlecha" target="_blank" rel="noopener">
+          Consultanos por WhatsApp
+          <svg viewBox="0 0 20 20" aria-hidden="true"><path d="M4 10h11m-4-4 4 4-4 4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </a>
       </div>
     </div>
   </section>

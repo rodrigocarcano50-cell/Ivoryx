@@ -213,6 +213,13 @@
           </div>
 
           <div class="campo">
+            <label for="costo">¿Cuánto te salió? <span class="opcional">en pesos</span></label>
+            <input id="costo" name="costo" type="text" inputmode="numeric" placeholder="380.000" autocomplete="off">
+            <p class="error" id="errorCosto" hidden>Escribí cuánto te salió el equipo, en números.</p>
+            <p class="ayuda">No se muestra en el sitio. Se usa para calcular la ganancia cuando lo vendés.</p>
+          </div>
+
+          <div class="campo">
             <label for="detalle">Detalle <span class="opcional">opcional</span></label>
             <textarea id="detalle" name="detalle" rows="2" maxlength="140" placeholder="Ej: con caja original, pantalla impecable"></textarea>
           </div>
@@ -224,7 +231,7 @@
               <label><input type="radio" name="estado" value="reservado"><span>Reservado</span></label>
               <label><input type="radio" name="estado" value="vendido"><span>Vendido</span></label>
             </div>
-            <p class="ayuda">Los vendidos no se muestran en el sitio, pero quedan acá por si querés volver a publicarlos.</p>
+            <p class="ayuda">Los vendidos no se muestran en el sitio. Si lo vendés con “Nueva venta”, se marca vendido solo.</p>
           </fieldset>
 
           <div class="editorAcciones">

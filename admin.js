@@ -145,9 +145,7 @@ function render() {
         <span class="filaPrecio">${Ivoryx.precio(p)}</span>
         <span class="estado estado-${p.estado}">${Ivoryx.ESTADOS[p.estado] || p.estado}</span>
       </button>
-      ${p.estado === 'vendido'
-        ? `<button type="button" class="btnVendido republicar" data-vender="${Ivoryx.escapar(p.id)}" data-estado="disponible">Volver a publicar</button>`
-        : `<button type="button" class="btnVendido" data-vender="${Ivoryx.escapar(p.id)}" data-estado="vendido">Vendido</button>`}
+      ${botonEstado(p)}
     </li>`).join('');
 
   listaVacia.hidden = visibles.length > 0;
@@ -158,15 +156,52 @@ function render() {
   }
 }
 
+const botonCopiar = (p, seg) =>
+  `<button type="button" class="btnVendido republicar" data-copiar="${Ivoryx.escapar(p.id)}" data-operacion="${Ivoryx.escapar(seg.operacion)}">Copiar mensaje</button>`;
+
+// Copia texto al portapapeles (con un método viejo de respaldo si el navegador no deja)
+async function copiarTexto(texto) {
+  try {
+    await navigator.clipboard.writeText(texto);
+    return true;
+  } catch {
+    const area = document.createElement('textarea');
+    area.value = texto;
+    area.setAttribute('readonly', '');
+    area.style.cssText = 'position:fixed;top:0;left:0;opacity:0';
+    document.body.appendChild(area);
+    area.select();
+    let ok = false;
+    try { ok = document.execCommand('copy'); } catch { ok = false; }
+    area.remove();
+    return ok;
+  }
+}
+
+// Botón de cada fila: Vendido, Volver a publicar o, si se vendió hace 2 días, Escribirle al cliente
+function botonEstado(p) {
+  const id = Ivoryx.escapar(p.id);
+  if (p.estado !== 'vendido') return `<button type="button" class="btnVendido" data-vender="${id}" data-estado="vendido">Vendido</button>`;
+  const seg = Gestion.seguimientoDeEquipo(p.id);
+  if (seg?.faltan > 0) return `<span class="seguimientoFalta">Escribile a ${Ivoryx.escapar(seg.cliente)} en ${seg.faltan === 1 ? '1 día' : `${seg.faltan} días`}</span>`;
+  if (seg?.enlace) return `<span class="seguimientoBotones">${botonCopiar(p, seg)}<a class="btnVendido escribir" href="${Ivoryx.escapar(seg.enlace)}"${seg.enlace.startsWith('intent:') ? '' : ' target="_blank" rel="noopener"'} data-escribir="${id}" data-operacion="${Ivoryx.escapar(seg.operacion)}">Escribirle a ${Ivoryx.escapar(seg.cliente)}</a></span>`;
+  if (seg) return `<span class="seguimientoFalta">Sin celular de ${Ivoryx.escapar(seg.cliente)}: corregilo en Clientes</span>`;
+  return `<button type="button" class="btnVendido republicar" data-vender="${id}" data-estado="disponible">Volver a publicar</button>`;
+}
+
+// stock.js la llama cuando termina de leer las ventas
+window.dibujarEquipos = () => render();
+
 async function recargar() {
   try {
-    productos = await Ivoryx.cargar();
+    // Los vendidos que ya tuvieron su seguimiento quedan archivados: no se listan
+    productos = (await Ivoryx.cargar()).filter((p) => !p.archivado);
   } catch (error) {
     console.error(error);
     avisar('No se pudieron leer los equipos. Revisá tu conexión y recargá la página.');
   }
   render();
-  Gestion.equiposCambiaron();
+  await Gestion.equiposCambiaron();
 }
 
 // ---------- Editor ----------
@@ -188,6 +223,8 @@ function abrirEditor(id = null) {
   $('bateria').value = p.bateria || '';
   $('precio').value = p.precio ? new Intl.NumberFormat('es-AR').format(p.precio) : '';
   $('moneda').value = p.moneda || 'ARS';
+  const costo = id ? Gestion.costoEquipo(id) : null;
+  $('costo').value = costo ? new Intl.NumberFormat('es-AR').format(costo) : '';
   $('detalle').value = p.detalle || '';
   form.querySelector(`input[name="estado"][value="${p.estado || 'disponible'}"]`).checked = true;
   fotoActual = p.imagen || '';
@@ -232,6 +269,14 @@ function datosDelEquipo() {
   };
 }
 
+// El costo no va en la tabla de equipos (que es pública): se guarda como precio de compra de su producto
+const leerCosto = () => (/\d/.test($('costo').value) ? Number($('costo').value.replace(/\D/g, '')) : null);
+
+async function guardarCosto(equipoId, costo) {
+  const { error } = await db.from('productos').update({ precio_compra: costo }).eq('equipo_id', equipoId);
+  if (error) throw error;
+}
+
 function limpiarErrores() {
   form.querySelectorAll('.error').forEach((e) => (e.hidden = true));
   form.querySelectorAll('[aria-invalid]').forEach((e) => e.removeAttribute('aria-invalid'));
@@ -248,6 +293,7 @@ function validar(d) {
   if (!d.modelo) { marcarError('modelo', 'errorModelo'); primero ??= 'modelo'; }
   if (d.bateria !== null && !(d.bateria >= 1 && d.bateria <= 100)) { marcarError('bateria', 'errorBateria'); primero ??= 'bateria'; }
   if (!d.precio) { marcarError('precio', 'errorPrecio'); primero ??= 'precio'; }
+  if (leerCosto() === null) { marcarError('costo', 'errorCosto'); primero ??= 'costo'; }
   if (primero) $(primero).focus();
   return !primero;
 }
@@ -271,11 +317,14 @@ form.addEventListener('submit', async (e) => {
   try {
     if (fotoNueva) datos.imagen = await subirFoto(fotoNueva);
 
+    // El id se arma acá para poder guardar el costo del equipo nuevo
+    const id = editandoId || crypto.randomUUID();
     const consulta = editandoId
-      ? db.from(Ivoryx.TABLA).update(datos).eq('id', editandoId)
-      : db.from(Ivoryx.TABLA).insert(datos);
+      ? db.from(Ivoryx.TABLA).update(datos).eq('id', id)
+      : db.from(Ivoryx.TABLA).insert({ id, ...datos });
     const { error } = await consulta;
     if (error) throw error;
+    await guardarCosto(id, leerCosto());
 
     avisar(editandoId ? 'Cambios guardados. Ya se ven en el sitio.' : `${datos.modelo} publicado en el sitio.`);
     cerrarEditor();
@@ -294,6 +343,7 @@ form.addEventListener('submit', async (e) => {
 $('btnEliminar').addEventListener('click', async () => {
   const eliminado = productos.find((p) => p.id === editandoId);
   if (!eliminado) return;
+  const costo = Gestion.costoEquipo(eliminado.id);
 
   const { error } = await db.from(Ivoryx.TABLA).delete().eq('id', eliminado.id);
   if (error) {
@@ -304,6 +354,7 @@ $('btnEliminar').addEventListener('click', async () => {
   await recargar();
   avisar(`${Ivoryx.titulo(eliminado)} eliminado.`, async () => {
     await db.from(Ivoryx.TABLA).insert(eliminado);
+    if (costo) await guardarCosto(eliminado.id, costo).catch(console.error);
     await recargar();
   });
 });
@@ -429,6 +480,29 @@ async function cambiarEstado(id, estado) {
 }
 
 filas.addEventListener('click', async (e) => {
+  // Escribirle: el enlace abre WhatsApp y el equipo sale de la lista
+  // Copiar mensaje: lo mismo, pero el texto queda copiado para pegarlo en WhatsApp Business
+  const escribir = e.target.closest('[data-escribir], [data-copiar]');
+  if (escribir) {
+    const copiar = 'copiar' in escribir.dataset;
+    const id = copiar ? escribir.dataset.copiar : escribir.dataset.escribir;
+    const p = productos.find((x) => x.id === id);
+    if (copiar) {
+      const seg = Gestion.seguimientoDeEquipo(id);
+      if (!seg || !(await copiarTexto(seg.mensaje))) return avisar('No se pudo copiar el mensaje. Probá con “Escribirle”.');
+    }
+    try {
+      const deshacer = await Gestion.cerrarSeguimiento(escribir.dataset.operacion, id);
+      if (editandoId === p?.id) cerrarEditor();
+      avisar(copiar
+        ? `Mensaje copiado: pegalo en el chat de WhatsApp Business. ${p ? Ivoryx.titulo(p) : 'El equipo'} salió de la lista.`
+        : `Mensaje listo para mandar. ${p ? Ivoryx.titulo(p) : 'El equipo'} salió de la lista (la venta queda en Movimientos).`, deshacer);
+    } catch (error) {
+      console.error(error);
+      avisar('No se pudo guardar el seguimiento. Probá de nuevo.');
+    }
+    return;
+  }
   const vender = e.target.closest('[data-vender]');
   if (vender) {
     const p = productos.find((x) => x.id === vender.dataset.vender);

@@ -92,8 +92,7 @@ section {
   margin-bottom: 56px;
 }
 
-.encabezado h2,
-.accesoriosTexto h2 {
+.encabezado h2 {
   font-size: clamp(32px, 4.5vw, 52px);
   font-weight: 800;
   letter-spacing: -0.035em;
@@ -806,6 +805,20 @@ section {
   max-width: 30ch;
 }
 
+.planEnlace {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--azul);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.planEnlace:hover {
+  color: var(--azulHover);
+}
+
 @media (max-width: 900px) {
   .planPasos {
     grid-template-columns: 1fr;
@@ -833,6 +846,11 @@ section {
     margin-bottom: 0;
   }
 
+  .planEnlace {
+    grid-column: 2;
+    justify-self: start;
+  }
+
   .planPaso h3 {
     padding-top: 12px;
   }
@@ -840,156 +858,111 @@ section {
 
 
 /* ================= Accesorios ================= */
-.accesoriosGrid {
+
+
+
+
+
+
+
+.accGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 64px;
-  align-items: center;
+  grid-template-columns: repeat(auto-fill, minmax(min(200px, 100%), 1fr));
+  gap: 20px;
 }
 
-.accesoriosTexto > p {
-  margin-top: 20px;
-  color: var(--gris);
-  font-size: 18px;
-  max-width: 42ch;
-}
-
-.accesoriosLista {
-  list-style: none;
+.acc {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin: 28px 0 36px;
-}
-
-.accesoriosLista li {
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--azul);
-  background: rgba(9, 50, 135, 0.06);
-  padding: 7px 14px;
-  border-radius: 999px;
-}
-
-.carruselMarco {
-  position: relative;
+  flex-direction: column;
   background: var(--blanco);
   border: 1px solid var(--borde);
-  border-radius: 28px;
-  padding: 30px;
-  box-shadow: var(--sombra);
-}
-
-.carruselBox {
-  width: 100%;
+  border-radius: 22px;
   overflow: hidden;
-  border-radius: 16px;
+  transition: transform 0.4s var(--salida), box-shadow 0.4s var(--salida), border-color 0.3s ease;
 }
 
-.carrusel {
-  display: flex;
-  list-style: none;
+.acc:hover {
+  transform: translateY(-4px);
+  border-color: transparent;
+  box-shadow: var(--sombraHover);
 }
 
-.carrusel li {
-  min-width: 100%;
-  aspect-ratio: 1 / 1;
-  display: grid;
-  place-items: center;
+.accFoto {
+  position: relative;
+  aspect-ratio: 4 / 3;
   background: var(--blanco);
+  border-bottom: 1px solid var(--borde);
 }
 
-.carrusel img {
+.accFoto img {
+  position: absolute;
+  inset: 0;
   width: 100%;
   height: 100%;
   object-fit: contain;
+  padding: 14px;
 }
 
-.carruselFlecha {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  display: grid;
-  place-items: center;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: 1px solid var(--borde);
-  background: rgba(255, 255, 255, 0.96);
-  color: var(--azul);
-  cursor: pointer;
-  box-shadow: 0 4px 14px rgba(5, 28, 79, 0.1);
-  transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.carruselFlecha svg {
-  width: 20px;
-  height: 20px;
-}
-
-.carruselFlecha:hover {
-  background: var(--azul);
-  color: var(--blanco);
-}
-
-.carruselPrev {
-  left: -22px;
-}
-
-.carruselNext {
-  right: -22px;
-}
-
-.carruselPuntos {
+.accInfo {
   display: flex;
-  justify-content: center;
-  gap: 8px;
-  margin-top: 20px;
+  flex-direction: column;
+  flex: 1;
+  padding: 18px 20px 20px;
 }
 
-.carruselPuntos span {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: var(--borde);
-  transition: width 0.4s var(--salida), background-color 0.3s ease;
+
+.accInfo h3 {
+  font-size: 19px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
 }
 
-.carruselPuntos span.activo {
-  width: 24px;
-  background: var(--azul);
+
+
+
+
+.accDescripcion {
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--gris);
 }
 
-@media (max-width: 900px) {
-  .accesoriosGrid {
-    grid-template-columns: 1fr;
-    text-align: center;
-    gap: 40px;
-  }
-
-  .accesoriosTexto > p {
-    margin-left: auto;
-    margin-right: auto;
-  }
-
-  .accesoriosLista {
-    justify-content: center;
-  }
-
-  .carruselMarco {
-    max-width: 460px;
-    margin: 0 auto;
-    padding: 20px;
-  }
-
-  .carruselPrev {
-    left: 8px;
-  }
-
-  .carruselNext {
-    right: 8px;
-  }
+.accPrecio {
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--azul);
+  font-variant-numeric: tabular-nums;
 }
+
+.accPrecio small {
+  display: block;
+  line-height: 1.2;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--gris);
+}
+
+.accInfo .equipoPie {
+  flex-wrap: nowrap;
+  align-items: flex-end;
+  padding-top: 18px;
+}
+
+.accInfo .equipoCta {
+  padding: 9px 16px;
+}
+
+
+
+
+.accGrid.entra .acc {
+  animation: subir 0.9s var(--salida) both;
+  animation-delay: calc(min(var(--orden), 8) * 60ms);
+}
+
 
 
 /* ================= Contacto ================= */
@@ -1069,9 +1042,10 @@ section {
 
 
 /* ================= Footer ================= */
+/* Abajo deja lugar para el botón flotante de WhatsApp, así no tapa "Admin" */
 .footer {
   border-top: 1px solid var(--borde);
-  padding: 40px 0 28px;
+  padding: 40px 0 104px;
 }
 
 .footerContenido {

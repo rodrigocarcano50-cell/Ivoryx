@@ -228,3 +228,148 @@ grant execute on function public.cliente_por_celular(jsonb) to authenticated;
 grant execute on function public.registrar_venta(jsonb, jsonb, text, text) to authenticated;
 grant execute on function public.registrar_ingreso(jsonb, text) to authenticated;
 grant execute on function public.eliminar_venta(text) to authenticated;
+
+-- ===============================================================
+-- Equipos vendibles: cada equipo de la tabla equipos tiene un producto
+-- (categoría Celulares, stock 1, o 0 si está vendido). Su precio de compra
+-- es lo que costó el equipo: se guarda acá y no en equipos, que es pública.
+-- Venderlo con registrar_venta lo marca vendido (sale del sitio);
+-- borrar esa venta lo vuelve a publicar.
+-- ===============================================================
+alter table public.productos add column if not exists equipo_id uuid unique references public.equipos (id) on delete set null;
+
+create or replace function public.equipo_a_producto()
+returns trigger language plpgsql security invoker set search_path = '' as $$
+declare
+  v_nombre text := trim(concat_ws(' ', new.modelo, new.capacidad));
+  v_stock integer := case when new.estado = 'vendido' then 0 else 1 end;
+  v_precio numeric := case when new.moneda = 'ARS' then new.precio else 0 end;
+begin
+  if tg_op = 'INSERT' then
+    insert into public.productos (nombre, categoria, color, stock, precio_venta, equipo_id)
+    values (v_nombre, 'Celulares', nullif(trim(new.color), ''), v_stock, v_precio, new.id)
+    on conflict (equipo_id) do nothing;
+  else
+    update public.productos
+       set nombre = v_nombre, color = nullif(trim(new.color), ''), stock = v_stock, precio_venta = v_precio
+     where equipo_id = new.id
+       and (nombre, coalesce(color, ''), stock, precio_venta)
+           is distinct from (v_nombre, coalesce(nullif(trim(new.color), ''), ''), v_stock, v_precio);
+  end if;
+  return null;
+end;
+$$;
+
+drop trigger if exists equipos_producto on public.equipos;
+create trigger equipos_producto after insert or update on public.equipos
+  for each row execute function public.equipo_a_producto();
+
+-- Al borrar un equipo: si nunca se vendió se borra su producto; si tiene ventas, queda en el historial sin stock
+create or replace function public.equipo_borrado()
+returns trigger language plpgsql security invoker set search_path = '' as $$
+begin
+  delete from public.productos p
+   where p.equipo_id = old.id
+     and not exists (select 1 from public.movimientos m where m.producto_id = p.id);
+  update public.productos set stock = 0 where equipo_id = old.id;
+  return old;
+end;
+$$;
+
+drop trigger if exists equipos_borrado on public.equipos;
+create trigger equipos_borrado before delete on public.equipos
+  for each row execute function public.equipo_borrado();
+
+-- Un equipo es una sola unidad
+create or replace function public.producto_equipo_tope()
+returns trigger language plpgsql security invoker set search_path = '' as $$
+begin
+  if new.equipo_id is not null and new.stock > 1 then new.stock := 1; end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists productos_equipo_tope on public.productos;
+create trigger productos_equipo_tope before insert or update on public.productos
+  for each row execute function public.producto_equipo_tope();
+
+create or replace function public.producto_a_equipo()
+returns trigger language plpgsql security invoker set search_path = '' as $$
+begin
+  if new.equipo_id is not null and new.stock is distinct from old.stock then
+    update public.equipos
+       set estado = case when new.stock <= 0 then 'vendido' when estado = 'vendido' then 'disponible' else estado end
+     where id = new.equipo_id
+       and estado <> case when new.stock <= 0 then 'vendido' when estado = 'vendido' then 'disponible' else estado end;
+  end if;
+  return null;
+end;
+$$;
+
+drop trigger if exists productos_equipo on public.productos;
+create trigger productos_equipo after update of stock on public.productos
+  for each row execute function public.producto_a_equipo();
+
+-- ---------------------------------------------------------------
+-- Las 5 tarjetas de accesorios de la página principal
+-- (fotos y textos editables desde el admin: "Accesorios en la web")
+-- ---------------------------------------------------------------
+create table if not exists public.vitrina (
+  id          text primary key default gen_random_uuid()::text,
+  orden       smallint not null default 0,
+  titulo      text not null,
+  descripcion text,
+  precio      numeric(14, 2) check (precio >= 0),
+  mensaje     text not null,
+  imagen      text not null default '',
+  visible     boolean not null default true
+);
+
+alter table public.vitrina enable row level security;
+revoke all on public.vitrina from anon;
+grant select on public.vitrina to anon, authenticated;
+grant insert, update, delete on public.vitrina to authenticated;
+
+drop policy if exists "ver vitrina" on public.vitrina;
+create policy "ver vitrina" on public.vitrina for select to anon, authenticated
+  using (visible or (select public.es_admin()));
+
+drop policy if exists "admin edita vitrina" on public.vitrina;
+create policy "admin edita vitrina" on public.vitrina for update to authenticated
+  using ((select public.es_admin())) with check ((select public.es_admin()));
+
+drop policy if exists "admin agrega vitrina" on public.vitrina;
+create policy "admin agrega vitrina" on public.vitrina for insert to authenticated
+  with check ((select public.es_admin()));
+
+drop policy if exists "admin borra vitrina" on public.vitrina;
+create policy "admin borra vitrina" on public.vitrina for delete to authenticated
+  using ((select public.es_admin()));
+
+insert into public.vitrina (id, orden, titulo, descripcion, precio, mensaje) values
+  ('silicona', 1, 'Funda de silicona', 'Colores lisos, para todos los modelos de iPhone.', 6000, 'Hola! Quería consultar por la funda de silicona. Mi iPhone es: '),
+  ('magsafe', 2, 'Funda MagSafe', 'Transparente, con imán para cargadores MagSafe.', 7000, 'Hola! Quería consultar por la funda MagSafe. Mi iPhone es: '),
+  ('cargador', 3, 'Cargador', 'Carga rápida USB-C.', 20000, 'Hola! Quería consultar por el cargador. Mi iPhone es: '),
+  ('airpods', 4, 'AirPods', 'AirPods Pro 2.', 30000, 'Hola! Quería consultar por los AirPods. ¿Qué modelos tenés?'),
+  ('templados', 5, 'Vidrio templado', 'Protección para la pantalla.', 4000, 'Hola! Quería consultar por el vidrio templado. Mi iPhone es: ')
+on conflict (id) do nothing;
+
+-- ---------------------------------------------------------------
+-- Seguimiento a los 2 días de vender un equipo (Resumen del admin):
+-- ventas que ya se contactaron o se descartaron
+-- ---------------------------------------------------------------
+create table if not exists public.seguimientos (
+  operacion text primary key,
+  hecho     timestamptz not null default now()
+);
+
+alter table public.seguimientos enable row level security;
+revoke all on public.seguimientos from anon;
+grant select, insert, delete on public.seguimientos to authenticated;
+drop policy if exists "solo admin" on public.seguimientos;
+create policy "solo admin" on public.seguimientos for all to authenticated
+  using ((select public.es_admin())) with check ((select public.es_admin()));
+
+-- Equipos vendidos que ya tuvieron su seguimiento: dejan de listarse en el admin
+-- (no se borran: la venta y el equipo quedan en el historial)
+alter table public.equipos add column if not exists archivado boolean not null default false;

@@ -1,113 +1,4 @@
 // ===============================
-// CARRUSEL DE ACCESORIOS
-// ===============================
-const carrusel = document.querySelector('.carrusel');
-const slides = Array.from(carrusel.children);
-const puntosBox = document.querySelector('.carruselPuntos');
-
-let index = 1;
-let autoPlay;
-let enMovimiento = false;
-const delay = 3000;
-const transitionTime = 700;
-
-// Clonamos primero y último para el loop infinito
-const firstClone = slides[0].cloneNode(true);
-const lastClone = slides[slides.length - 1].cloneNode(true);
-
-carrusel.appendChild(firstClone);
-carrusel.insertBefore(lastClone, slides[0]);
-
-// Puntos indicadores
-const puntos = slides.map((_, i) => {
-  const punto = document.createElement('span');
-  puntosBox.appendChild(punto);
-  return punto;
-});
-
-function actualizarPuntos() {
-  let real = index - 1;
-  if (index === 0) real = slides.length - 1;
-  if (index === slides.length + 1) real = 0;
-  puntos.forEach((p, i) => p.classList.toggle('activo', i === real));
-}
-
-// Usamos porcentaje para que no se rompa al cambiar el tamaño de la ventana
-function mover(animado) {
-  carrusel.style.transition = animado ? `transform ${transitionTime}ms cubic-bezier(.65,0,.35,1)` : 'none';
-  carrusel.style.transform = `translateX(-${index * 100}%)`;
-  actualizarPuntos();
-}
-
-function irA(nuevoIndex) {
-  if (enMovimiento) return;
-  enMovimiento = true;
-  index = nuevoIndex;
-  mover(true);
-  // Usamos un timeout (y no transitionend) para que funcione aunque las animaciones estén desactivadas
-  setTimeout(finalizarMovimiento, transitionTime + 20);
-}
-
-mover(false);
-
-// Loop infinito limpio
-function finalizarMovimiento() {
-  enMovimiento = false;
-  if (index === slides.length + 1) {
-    index = 1;
-    mover(false);
-  }
-  if (index === 0) {
-    index = slides.length;
-    mover(false);
-  }
-}
-
-// Autoplay
-function startAutoPlay() {
-  stopAutoPlay();
-  autoPlay = setInterval(() => irA(index + 1), delay);
-}
-
-function stopAutoPlay() {
-  clearInterval(autoPlay);
-}
-
-// Flechas
-document.querySelector('.carruselNext').addEventListener('click', () => {
-  irA(index + 1);
-  startAutoPlay();
-});
-
-document.querySelector('.carruselPrev').addEventListener('click', () => {
-  irA(index - 1);
-  startAutoPlay();
-});
-
-// Deslizar con el dedo en celulares
-let inicioX = 0;
-carrusel.addEventListener('touchstart', (e) => {
-  inicioX = e.touches[0].clientX;
-  stopAutoPlay();
-}, { passive: true });
-
-carrusel.addEventListener('touchend', (e) => {
-  const diferencia = e.changedTouches[0].clientX - inicioX;
-  if (Math.abs(diferencia) > 40) {
-    irA(diferencia < 0 ? index + 1 : index - 1);
-  }
-  startAutoPlay();
-});
-
-// Pausa al pasar el mouse
-const marco = document.querySelector('.carruselMarco');
-marco.addEventListener('mouseenter', stopAutoPlay);
-marco.addEventListener('mouseleave', startAutoPlay);
-
-startAutoPlay();
-
-
-// ===============================
 // PARA QUE SE CIERRE EL MENU HAMBURGUESA
 // ===============================
 const menuCheckbox = document.getElementById('menu');
@@ -199,19 +90,60 @@ async function mostrarEquipos() {
 
   equiposEstado.hidden = true;
   equiposGrid.innerHTML = productos.map(tarjetaEquipo).join('');
-  animarEquipos();
+  animarGrilla(equiposGrid);
 }
 
 // Las tarjetas entran escalonadas la primera vez que la grilla aparece en pantalla
-function animarEquipos() {
+function animarGrilla(grilla) {
   if (!('IntersectionObserver' in window) || matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   const observer = new IntersectionObserver((entradas) => {
     if (entradas[0].isIntersecting) {
-      equiposGrid.classList.add('entra');
+      grilla.classList.add('entra');
       observer.disconnect();
     }
   }, { threshold: 0.1 });
-  observer.observe(equiposGrid);
+  observer.observe(grilla);
 }
 
 mostrarEquipos();
+
+
+// ===============================
+// ACCESORIOS (las tarjetas se editan en el admin: "Accesorios en la web")
+// ===============================
+const accGrid = document.getElementById('accGrid');
+const accEstado = document.getElementById('accEstado');
+
+// Foto de muestra mientras no se suba una desde el admin
+const ACC_FOTOS = { silicona: 'funda.png', magsafe: 'funda.png', cargador: 'cargador.png', airpods: 'airpods.gif', templados: 'protector.webp' };
+
+function tarjetaAccesorio(a, orden) {
+  const foto = a.imagen || ACC_FOTOS[a.id] || 'cargador.png';
+  const precio = Number(a.precio) > 0 ? Ivoryx.precio({ precio: Number(a.precio), moneda: 'ARS' }) : '';
+  return `
+    <article class="acc" style="--orden:${orden}">
+      <div class="accFoto"><img src="${Ivoryx.escapar(foto)}" alt="${Ivoryx.escapar(a.titulo)}" loading="lazy"></div>
+      <div class="accInfo">
+        <h3>${Ivoryx.escapar(a.titulo)}</h3>
+        ${a.descripcion ? `<p class="accDescripcion">${Ivoryx.escapar(a.descripcion)}</p>` : ''}
+        <div class="equipoPie">
+          ${precio ? `<span class="accPrecio"><small>desde</small> ${precio}</span>` : '<span></span>'}
+          <a class="equipoCta" href="${Ivoryx.enlaceWhatsapp(a.mensaje)}" target="_blank" rel="noopener">Consultar</a>
+        </div>
+      </div>
+    </article>`;
+}
+
+async function mostrarAccesorios() {
+  const { data, error } = await Ivoryx.db.from('vitrina').select('id, titulo, descripcion, precio, mensaje, imagen').order('orden');
+  if (error || !data.length) {
+    if (error) console.error(error);
+    accEstado.innerHTML = 'Consultá los accesorios disponibles <a href="https://wa.me/5492617501979" target="_blank" rel="noopener">por WhatsApp</a>.';
+    return;
+  }
+  accEstado.hidden = true;
+  accGrid.innerHTML = data.map(tarjetaAccesorio).join('');
+  animarGrilla(accGrid);
+}
+
+mostrarAccesorios();

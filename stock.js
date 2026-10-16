@@ -18,6 +18,7 @@ const Gestion = (() => {
   const SECCIONES = ['resumen', 'equipos', 'stock', 'movimientos', 'clientes', 'estadisticas', 'ajustes'];
   const TITULOS = { resumen: 'Resumen', equipos: 'Equipos', stock: 'Stock de accesorios', movimientos: 'Movimientos', clientes: 'Clientes', estadisticas: 'Estadísticas', ajustes: 'Ajustes' };
   const SIN_MODELO = 'Sin modelo';
+  const MUESTRA = 'Muestra'; // pestaña de Stock con los accesorios que se ven en la página principal
 
   // Colores sugeridos para accesorios (se puede escribir cualquier otro)
   const COLORES = {
@@ -44,7 +45,8 @@ const Gestion = (() => {
   const vistaEquipos = document.getElementById('vistaEquipos');
   const modal = document.getElementById('modal');
 
-  let datos = { productos: [], movimientos: [], clientes: [], combos: [], ajustes: { stock_bajo: 5 } };
+  // productos: solo accesorios. todos: también los equipos (para vender y para el historial)
+  let datos = { productos: [], todos: [], movimientos: [], clientes: [], combos: [], vitrina: [], seguimientos: [], ajustes: { stock_bajo: 5 } };
   let cargado = false;
   let ruta = { seccion: 'resumen', categoria: '', modelo: '' };
   let busquedaStock = '';
@@ -66,7 +68,7 @@ const Gestion = (() => {
   const ICONO_BUSCAR = '<svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="9" cy="9" r="5.5" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="m13.5 13.5 3 3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
   const ICONO_CERRAR = '<svg viewBox="0 0 20 20" aria-hidden="true"><path d="m5 5 10 10M15 5 5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>';
 
-  const producto = (id) => datos.productos.find((p) => p.id === id);
+  const producto = (id) => datos.todos.find((p) => p.id === id);
   const cliente = (id) => datos.clientes.find((c) => c.id === id);
   const combo = (id) => datos.combos.find((c) => c.id === id);
   const etiqueta = (p) => [p.nombre, p.modelo, p.color].filter(Boolean).join(' · ');
@@ -140,17 +142,24 @@ const Gestion = (() => {
   }
 
   async function cargar() {
-    const [productos, movimientos, clientes, combos, ajustes] = await Promise.all([
+    const [productos, movimientos, clientes, combos, ajustes, vitrina, seguimientos] = await Promise.all([
       traer('productos', 'creado', true),
       traer('movimientos', 'fecha', false),
       traer('clientes', 'creado', true),
       traer('combos', 'creado', true),
-      db.from('ajustes').select('*').eq('id', 1).maybeSingle()
+      db.from('ajustes').select('*').eq('id', 1).maybeSingle(),
+      db.from('vitrina').select('*').order('orden'),
+      db.from('seguimientos').select('operacion')
     ]);
     if (ajustes.error) throw ajustes.error;
+    if (vitrina.error) throw vitrina.error;
+    if (seguimientos.error) throw seguimientos.error;
     datos = {
-      productos: productos.filter((p) => !OCULTAS.includes(p.categoria)),
+      productos: productos.filter((p) => !p.equipo_id && !OCULTAS.includes(p.categoria)),
+      todos: productos,
       movimientos, clientes, combos,
+      vitrina: vitrina.data,
+      seguimientos: seguimientos.data,
       ajustes: ajustes.data || { stock_bajo: 5 }
     };
     cargado = true;
@@ -164,6 +173,7 @@ const Gestion = (() => {
       avisar('No se pudieron leer el stock y las ventas. Revisá tu conexión y recargá la página.');
     }
     render();
+    window.dibujarEquipos?.(); // los botones de seguimiento de Equipos dependen de las ventas
   }
 
   function mensajeError(error, porDefecto) {
@@ -193,7 +203,7 @@ const Gestion = (() => {
     });
     return {
       seccion: SECCIONES.includes(partes[0]) ? partes[0] : 'resumen',
-      categoria: CATEGORIAS.includes(partes[1]) ? partes[1] : '',
+      categoria: CATEGORIAS.includes(partes[1]) || partes[1] === MUESTRA ? partes[1] : '',
       modelo: partes[2] || ''
     };
   }
@@ -247,6 +257,139 @@ const Gestion = (() => {
   const etiquetaNivel = (stock) => { const n = nivel(stock); return `<span class="etiqueta ${n.clase}">${n.texto}</span>`; };
   const boton = (texto, accion, extra = '', clase = 'btnMini') => `<button type="button" class="${clase}" data-accion="${accion}" ${extra}>${texto}</button>`;
 
+  // ---------- Seguimiento a los 2 días de vender un equipo ----------
+  const DIAS_SEGUIMIENTO = 2;
+  const DIAS_MAXIMO = 15; // las ventas más viejas ya no se recuerdan
+
+  const diasDesde = (fecha) => Math.round((new Date(diaLocal(new Date())) - new Date(diaLocal(fecha))) / 86400000);
+
+  // Celulares guardados como 2615555555 -> 5492615555555 (formato de wa.me)
+  function celularWhatsapp(celular) {
+    let d = (celular || '').replace(/\D/g, '');
+    if (d.startsWith('549') && d.length === 13) return d;
+    if (d.startsWith('54') && d.length === 12) d = d.slice(2);
+    if (d.startsWith('0')) d = d.slice(1);
+    return d.length === 10 ? '549' + d : null;
+  }
+
+  // Ventas de equipos de los últimos días que todavía no tuvieron seguimiento
+  function seguimientosPendientes() {
+    const hechos = new Set(datos.seguimientos.map((s) => s.operacion));
+    return operaciones(ventas())
+      .filter((o) => !hechos.has(o.id) && o.cliente)
+      .map((o) => {
+        const item = o.items.find((m) => { const p = producto(m.producto_id); return p && (p.equipo_id || p.categoria === 'Celulares'); });
+        return item && { ...o, equipo: producto(item.producto_id), dias: diasDesde(o.fecha) };
+      })
+      .filter((o) => o && o.dias <= DIAS_MAXIMO)
+      .sort((a, b) => new Date(a.fecha) - new Date(b.fecha));
+  }
+
+  function mensajeSeguimiento(o) {
+    const equipo = (o.equipo.nombre || 'equipo').replace(/\s*\d+\s*(GB|TB)$/i, '');
+    const nombre = o.cliente.nombre ? ` ${o.cliente.nombre}` : '';
+    return `Hola${nombre}! ¿Cómo andás con el ${equipo}? ¿Te surgió algo o tenés alguna duda? Cualquier cosa escribime.`;
+  }
+
+  // En Android abre directo WhatsApp Business; en el resto, el enlace común de WhatsApp
+  function enlaceWhatsappCliente(numero, texto) {
+    const t = encodeURIComponent(texto);
+    const web = `https://wa.me/${numero}?text=${t}`;
+    if (!/android/i.test(navigator.userAgent)) return web;
+    return `intent://send?phone=${numero}&text=${t}#Intent;scheme=whatsapp;package=com.whatsapp.w4b;S.browser_fallback_url=${encodeURIComponent(web)};end`;
+  }
+
+  function cajaSeguimientos() {
+    const todos = seguimientosPendientes();
+    const hoy = todos.filter((o) => o.dias >= DIAS_SEGUIMIENTO);
+    const proximos = todos.length - hoy.length;
+    if (!hoy.length && !proximos) return '';
+    const cuando = (dias) => (dias === DIAS_SEGUIMIENTO ? `compró hace ${dias} días` : `compró hace ${dias} días · atrasado`);
+    return `
+      <section class="caja seguimientos">
+        <div class="cajaCabecera">
+          <h2>Seguimientos de hoy</h2>
+          ${proximos ? `<span class="sutil chico">${proximos} más en los próximos días</span>` : ''}
+        </div>
+        ${hoy.length ? `<ul class="listaSeguimientos">${hoy.map((o) => {
+          const numero = celularWhatsapp(o.cliente.celular);
+          return `<li>
+            <div class="seguimientoTexto">
+              <strong>${esc(nombreCliente(o.cliente))}</strong>
+              <span>${esc(o.equipo.nombre)}${o.equipo.color ? ` · ${esc(o.equipo.color)}` : ''} · ${cuando(o.dias)}</span>
+              ${numero ? '' : `<span class="tono-bajo">${o.cliente.celular ? 'El celular guardado está incompleto' : 'No dejó el celular'}: editalo en Clientes para poder escribirle.</span>`}
+            </div>
+            <div class="seguimientoAcciones">
+              ${numero ? `<a class="btnChico lleno" href="${esc(enlaceWhatsappCliente(numero, mensajeSeguimiento(o)))}"${/android/i.test(navigator.userAgent) ? '' : ' target="_blank" rel="noopener"'} data-accion="seguimiento-escribir" data-id="${esc(o.id)}">Escribirle</a>` : ''}
+              ${boton('Copiar mensaje', 'seguimiento-copiar', `data-id="${esc(o.id)}"`, 'btnChico')}
+              ${boton('Descartar', 'seguimiento-descartar', `data-id="${esc(o.id)}"`, 'btnMini')}
+            </div>
+          </li>`;
+        }).join('')}</ul>`
+          : '<p class="vacio chico">Hoy no hay a quién escribirle.</p>'}
+      </section>`;
+  }
+
+  // Para la lista de Equipos: el seguimiento pendiente de ese equipo vendido, si hay
+  function seguimientoDeEquipo(equipoId) {
+    const o = seguimientosPendientes().find((x) => x.equipo.equipo_id === equipoId);
+    if (!o) return null;
+    const numero = celularWhatsapp(o.cliente.celular);
+    return {
+      operacion: o.id,
+      cliente: nombreCliente(o.cliente),
+      faltan: Math.max(0, DIAS_SEGUIMIENTO - o.dias),
+      mensaje: mensajeSeguimiento(o),
+      enlace: numero ? enlaceWhatsappCliente(numero, mensajeSeguimiento(o)) : null
+    };
+  }
+
+  // Le escribiste al cliente: el seguimiento queda hecho y el equipo sale de la lista de Equipos
+  async function cerrarSeguimiento(operacion, equipoId) {
+    const { error } = await db.from('seguimientos').upsert({ operacion });
+    if (error) throw error;
+    if (equipoId) {
+      const { error: errorEquipo } = await db.from(Ivoryx.TABLA).update({ archivado: true }).eq('id', equipoId);
+      if (errorEquipo) throw errorEquipo;
+    }
+    const deshacer = async () => {
+      await db.from('seguimientos').delete().eq('operacion', operacion);
+      if (equipoId) await db.from(Ivoryx.TABLA).update({ archivado: false }).eq('id', equipoId);
+      recargarEquipos();
+    };
+    recargarEquipos(); // también vuelve a leer el stock y los seguimientos
+    return deshacer;
+  }
+
+  // copiar: en vez de abrir WhatsApp, copia el mensaje para pegarlo en WhatsApp Business
+  async function escribirSeguimiento(operacion, copiar = false) {
+    const o = seguimientosPendientes().find((x) => x.id === operacion);
+    if (!o) return;
+    if (copiar && !(await copiarTexto(mensajeSeguimiento(o)))) return avisar('No se pudo copiar el mensaje. Probá con “Escribirle”.');
+    try {
+      const deshacer = await cerrarSeguimiento(operacion, o.equipo.equipo_id);
+      avisar(copiar
+        ? 'Mensaje copiado: pegalo en el chat de WhatsApp Business. El equipo salió de la lista.'
+        : 'Seguimiento hecho. El equipo salió de la lista (la venta queda en Movimientos).', deshacer);
+    } catch (error) {
+      console.error(error);
+      avisar('No se pudo guardar el seguimiento. Probá de nuevo.');
+    }
+  }
+
+  async function marcarSeguimiento(operacion, texto) {
+    const { error } = await db.from('seguimientos').upsert({ operacion });
+    if (error) {
+      console.error(error);
+      return avisar('No se pudo guardar el seguimiento. Probá de nuevo.');
+    }
+    await refrescar();
+    avisar(texto, async () => {
+      await db.from('seguimientos').delete().eq('operacion', operacion);
+      await refrescar();
+    });
+  }
+
   // ---------- Resumen ----------
   function vistaResumen() {
     const P = datos.productos;
@@ -256,7 +399,7 @@ const Gestion = (() => {
     const opsHoy = new Set(ventasHoy.map((m) => m.operacion)).size;
     const pocos = P.filter((p) => p.stock > 0 && p.stock <= bajo).length;
     const agotados = P.filter((p) => p.stock <= 0).length;
-    const eq = equipos();
+    const eq = equipos().filter((e) => !e.archivado);
     const disponibles = eq.filter((e) => e.estado === 'disponible').length;
     const reservados = eq.filter((e) => e.estado === 'reservado').length;
     const reponer = P.filter((p) => p.stock <= bajo).sort((a, b) => a.stock - b.stock);
@@ -266,6 +409,8 @@ const Gestion = (() => {
       ${cabecera('Resumen', hoyTexto.charAt(0).toUpperCase() + hoyTexto.slice(1),
         `${boton('Nuevo ingreso', 'nuevo-ingreso', '', 'btnChico')}
          <button type="button" class="btn btnPrimario" data-accion="nueva-venta">Nueva venta</button>`)}
+
+      ${cajaSeguimientos()}
 
       <div class="datos">
         ${dato('Vendido hoy', $p(suma(ventasHoy, importe)), `${plural(opsHoy, 'venta')} · ${plural(suma(ventasHoy, (m) => m.cantidad), 'unidad', 'unidades')}`)}
@@ -338,7 +483,9 @@ const Gestion = (() => {
     return `
       ${cabecera('Stock de accesorios', `${plural(suma(P, (p) => Math.max(0, p.stock)), 'unidad', 'unidades')} en ${plural(P.length, 'producto')}`,
         `${boton('Ingreso de mercadería', 'nuevo-ingreso', '', 'btnChico')}
-         <button type="button" class="btn btnPrimario" data-accion="nuevo-producto" data-categoria="${esc(cat)}" data-modelo="${esc(ruta.modelo)}">Nuevo producto</button>`)}
+         ${cat === MUESTRA
+           ? boton('Agregar a la muestra', 'nueva-vitrina', '', 'btn btnPrimario')
+           : `<button type="button" class="btn btnPrimario" data-accion="nuevo-producto" data-categoria="${esc(cat)}" data-modelo="${esc(ruta.modelo)}">Nuevo producto</button>`}`)}
 
       <label class="buscador buscadorSuelto">
         ${ICONO_BUSCAR}
@@ -347,6 +494,7 @@ const Gestion = (() => {
       </label>
 
       <nav class="pestanas" aria-label="Categorías">
+        <a class="pestana pestanaMuestra" href="${enlace('stock', MUESTRA)}"${cat === MUESTRA && !busquedaStock ? ' aria-current="page"' : ''}>Muestra<span class="cuenta">${datos.vitrina.filter((a) => a.visible).length}</span></a>
         ${CATEGORIAS.map((c) => {
           const unidades = suma(P.filter((p) => p.categoria === c), (p) => Math.max(0, p.stock));
           return `<a class="pestana" href="${enlace('stock', c)}"${c === cat && !busquedaStock ? ' aria-current="page"' : ''}>${c}<span class="cuenta">${unidades}</span></a>`;
@@ -363,6 +511,7 @@ const Gestion = (() => {
         ${tablaProductos(hallados, { categoria: true, modelo: true, color: true })}`;
     }
     const cat = ruta.categoria;
+    if (cat === MUESTRA) return contenidoMuestra();
     if (POR_MODELO.has(cat)) return ruta.modelo ? detalleModelo(cat, ruta.modelo) : tarjetasModelos(cat);
     return listaCategoria(cat);
   }
@@ -665,6 +814,142 @@ const Gestion = (() => {
   }
 
   // ---------- Ajustes ----------
+  // ---------- Muestra: los accesorios que se ven en la página principal ----------
+  // Fotos de muestra de las 5 tarjetas originales, mientras no se suba una propia
+  const FOTOS_VITRINA = { silicona: 'funda.png', magsafe: 'funda.png', cargador: 'cargador.png', airpods: 'airpods.gif', templados: 'protector.webp' };
+  const fotoVitrina = (a) => a.imagen || FOTOS_VITRINA[a.id] || '';
+
+  function contenidoMuestra() {
+    const lista = datos.vitrina;
+    const visibles = lista.filter((a) => a.visible).length;
+    return `
+      <div class="herramientas margenAbajo">
+        <p class="sutil">${plural(visibles, 'accesorio')} en la página principal${lista.length > visibles ? ` · ${plural(lista.length - visibles, 'oculto')}` : ''}.</p>
+        <a class="btnChico" href="index.html#accesorios" target="_blank" rel="noopener">Ver en el sitio</a>
+      </div>
+      <div class="vitrinaGrid">
+        ${lista.map((a) => `
+          <article class="vitrinaItem${a.visible ? '' : ' vitrinaOculta'}">
+            <button type="button" class="vitrinaAbrir" data-accion="editar-vitrina" data-id="${esc(a.id)}" aria-label="Editar ${esc(a.titulo)}">
+              <span class="vitrinaFoto">${fotoVitrina(a) ? `<img src="${esc(fotoVitrina(a))}" alt="">` : '<span class="vitrinaSinFoto">Sin foto</span>'}</span>
+              <span class="vitrinaTexto">
+                <strong>${esc(a.titulo)}</strong>
+                <span>${Number(a.precio) > 0 ? `desde ${$p(a.precio)}` : 'Sin precio'}${a.visible ? '' : ' · Oculto'}</span>
+                ${a.imagen ? '' : '<span class="vitrinaAviso">Foto de muestra: subí la tuya</span>'}
+              </span>
+            </button>
+            <div class="vitrinaAcciones">
+              ${boton('Editar', 'editar-vitrina', `data-id="${esc(a.id)}"`)}
+              ${boton('Borrar', 'borrar-vitrina', `data-id="${esc(a.id)}"`, 'btnMini peligro')}
+            </div>
+          </article>`).join('')}
+        <button type="button" class="vitrinaNueva" data-accion="nueva-vitrina">
+          <span aria-hidden="true">+</span>
+          Agregar accesorio
+        </button>
+      </div>`;
+  }
+
+  // a: tarjeta a editar; sin a, se agrega una nueva al final
+  function formVitrina(a = null) {
+    const nueva = !a;
+    const v = a || { titulo: '', descripcion: '', precio: null, mensaje: '', imagen: '', visible: true };
+    let fotoNueva = null;
+    let imagen = v.imagen;
+    abrirModal({
+      titulo: nueva ? 'Agregar a la muestra' : `Editar ${esc(v.titulo)}`,
+      cuerpo: `
+        <div class="fotoCampo">
+          <div class="fotoVista" id="vitFotoVista"></div>
+          <div class="fotoAcciones">
+            <label class="btnSecundario">
+              <input type="file" id="vitFoto" accept="image/*" class="visualmenteOculto">
+              Subir foto
+            </label>
+            <button type="button" class="btnTexto" id="vitQuitarFoto">Quitar foto</button>
+            <p class="ayuda">Una foto del accesorio, mejor con fondo blanco.</p>
+          </div>
+        </div>
+        <div class="campo">
+          <label for="vitTitulo">Nombre</label>
+          <input id="vitTitulo" value="${esc(v.titulo)}" placeholder="Ej: Funda de silicona" autocomplete="off">
+        </div>
+        <div class="campo">
+          <label for="vitDescripcion">Descripción <span class="opcional">opcional</span></label>
+          <input id="vitDescripcion" value="${esc(v.descripcion || '')}" maxlength="90" placeholder="Ej: Colores lisos, para todos los modelos" autocomplete="off">
+        </div>
+        <div class="campo">
+          <label for="vitPrecio">Precio “desde” <span class="opcional">opcional</span></label>
+          <input id="vitPrecio" type="number" min="0" step="any" inputmode="decimal" value="${v.precio ?? ''}" placeholder="Vacío: no se muestra precio">
+        </div>
+        <div class="campo">
+          <label for="vitMensaje">Mensaje de WhatsApp <span class="opcional">opcional</span></label>
+          <textarea id="vitMensaje" rows="2" placeholder="Si lo dejás vacío: Hola! Quería consultar por … Mi iPhone es:">${esc(v.mensaje)}</textarea>
+          <p class="ayuda">Es el texto que le aparece escrito al cliente cuando toca “Consultar”.</p>
+        </div>
+        <label class="casilla"><input type="checkbox" id="vitVisible"${v.visible ? ' checked' : ''}> Mostrar en la página</label>`,
+      pie: `<button type="button" class="btnTexto" data-cerrar>Cancelar</button>
+            <button type="submit" class="btn btnPrimario">${nueva ? 'Agregar' : 'Guardar'}</button>`,
+      alMontar: (form) => {
+        const vista = form.querySelector('#vitFotoVista');
+        const quitar = form.querySelector('#vitQuitarFoto');
+        const dibujar = () => {
+          const url = fotoNueva ? URL.createObjectURL(fotoNueva) : fotoVitrina({ ...v, imagen });
+          vista.innerHTML = url ? `<img src="${esc(url)}" alt="">` : '<span class="vitrinaSinFoto">Sin foto</span>';
+          quitar.hidden = !fotoNueva && !imagen;
+        };
+        form.querySelector('#vitFoto').addEventListener('change', async (e) => {
+          const archivo = e.target.files[0];
+          e.target.value = '';
+          if (!archivo) return;
+          try {
+            fotoNueva = await achicarImagen(archivo); // de admin.js
+            dibujar();
+          } catch {
+            avisar('No pudimos abrir esa imagen. Probá con una foto JPG o PNG.');
+          }
+        });
+        quitar.addEventListener('click', () => { fotoNueva = null; imagen = ''; dibujar(); });
+        dibujar();
+        form.querySelector('#vitTitulo').focus();
+      },
+      alEnviar: async (form, fallo) => {
+        const valor = (id) => form.querySelector(id).value.trim();
+        const titulo = valor('#vitTitulo');
+        const fila = {
+          titulo,
+          descripcion: valor('#vitDescripcion') || null,
+          precio: valor('#vitPrecio') === '' ? null : Number(valor('#vitPrecio')),
+          mensaje: valor('#vitMensaje') || `Hola! Quería consultar por ${titulo.charAt(0).toLowerCase() + titulo.slice(1)}. Mi iPhone es: `,
+          visible: form.querySelector('#vitVisible').checked,
+          imagen
+        };
+        if (!titulo) return fallo('Escribí el nombre del accesorio.');
+        if (fila.precio !== null && !(fila.precio >= 0)) return fallo('El precio tiene que ser un número.');
+        if (!fotoNueva && !fotoVitrina({ ...v, imagen })) return fallo('Subí una foto del accesorio.');
+        if (fotoNueva) fila.imagen = await subirFoto(fotoNueva); // de admin.js
+        if (nueva) fila.orden = Math.max(0, ...datos.vitrina.map((x) => x.orden || 0)) + 1;
+        const { error } = nueva
+          ? await db.from('vitrina').insert(fila)
+          : await db.from('vitrina').update(fila).eq('id', v.id);
+        if (error) throw error;
+        await refrescar();
+        avisar(nueva ? `${titulo} agregado a la página.` : 'Listo. Ya se ve así en la página.');
+      }
+    });
+  }
+
+  async function borrarVitrina(id) {
+    const a = datos.vitrina.find((x) => x.id === id);
+    if (!a) return;
+    const ok = await confirmar({
+      titulo: 'Borrar de la muestra',
+      texto: `¿Sacar <strong>${esc(a.titulo)}</strong> de la página principal? Si solo querés ocultarlo un tiempo, editalo y destildá “Mostrar en la página”.`,
+      accion: 'Borrar'
+    });
+    if (ok) await escribir(db.from('vitrina').delete().eq('id', id), `${a.titulo} se sacó de la página.`, 'No se pudo borrar. Probá de nuevo.');
+  }
+
   function vistaAjustes() {
     return `
       ${cabecera('Ajustes', 'Alertas de stock y copias de seguridad')}
@@ -926,19 +1211,31 @@ const Gestion = (() => {
 
     function opciones(consulta) {
       let html = '';
+      let hayOtros = false; // combos o equipos arriba de los accesorios
       if (esVenta) {
         const combos = datos.combos.filter((c) => stockCombo(c) > 0 && coincide(c.nombre, consulta)).slice(0, 5);
         if (combos.length) {
           html += `<p class="opcionesTitulo">Combos</p>${combos.map((c) => `
             <button type="button" class="opcion" role="option" data-combo="${esc(c.id)}">
               <span><span class="etiqueta venta">Combo</span> ${esc(c.nombre)}</span><small>${stockCombo(c)} disp.</small>
-            </button>`).join('')}<p class="opcionesTitulo">Productos</p>`;
+            </button>`).join('')}`;
+        }
+        hayOtros = combos.length > 0;
+        const equiposVenta = datos.todos.filter((p) => p.equipo_id && disponible(p) > 0 && coincide(textoBusqueda(p), consulta)).slice(0, 8);
+        if (equiposVenta.length) {
+          hayOtros = true;
+          html += `<p class="opcionesTitulo">Equipos</p>${equiposVenta.map((p) => `
+            <button type="button" class="opcion" role="option" data-producto="${esc(p.id)}">
+              <span><span class="etiqueta ingreso">Equipo</span> <strong>${esc(p.nombre)}</strong>${p.color ? ` · ${esc(p.color)}` : ''}</span><small>${p.precio_venta ? $p(p.precio_venta) : 'en USD: poné el precio en $'}</small>
+            </button>`).join('')}`;
         }
       }
       const lista = datos.productos
         .filter((p) => (!esVenta || disponible(p) > 0) && coincide(textoBusqueda(p), consulta))
         .sort((a, b) => etiqueta(a).localeCompare(etiqueta(b), 'es', { numeric: true }))
         .slice(0, 40);
+      if (hayOtros && !lista.length) return html;
+      if (hayOtros) html += '<p class="opcionesTitulo">Accesorios</p>';
       html += lista.length ? lista.map((p) => `
         <button type="button" class="opcion" role="option" data-producto="${esc(p.id)}">
           <span>${punto(p.color)}<strong>${esc(p.nombre)}</strong>${p.modelo ? ` · ${esc(p.modelo)}` : ''}${p.color ? ` · ${esc(p.color)}` : ''}</span>
@@ -1231,6 +1528,7 @@ const Gestion = (() => {
         });
         if (error) throw error;
         await refrescar();
+        if (lineas.some((l) => producto(l.producto_id)?.equipo_id) || anteriores.some((m) => producto(m.producto_id)?.equipo_id)) recargarEquipos();
         avisar(operacion ? 'Venta actualizada.' : `Venta registrada: ${$p(suma(lineas, (l) => l.cantidad * l.precio_unitario))}.`);
       }
     });
@@ -1243,7 +1541,9 @@ const Gestion = (() => {
       titulo: 'Eliminar venta',
       texto: `¿Eliminar esta venta de ${plural(suma(items, (m) => m.cantidad), 'unidad', 'unidades')} por ${$p(suma(items, importe))}? El stock vuelve al inventario.`
     });
-    if (ok) await escribir(db.rpc('eliminar_venta', { p_operacion: operacion }), 'Venta eliminada. El stock volvió al inventario.', 'No se pudo eliminar la venta. Probá de nuevo.');
+    if (!ok) return;
+    const borrada = await escribir(db.rpc('eliminar_venta', { p_operacion: operacion }), 'Venta eliminada. El stock volvió al inventario.', 'No se pudo eliminar la venta. Probá de nuevo.');
+    if (borrada && items.some((m) => producto(m.producto_id)?.equipo_id)) recargarEquipos();
   }
 
   // ---------- Combos ----------
@@ -1471,7 +1771,8 @@ const Gestion = (() => {
   }
 
   function descargarCopia() {
-    const copia = { app: 'ivoryx-admin', version: 1, fecha: new Date().toISOString(), ...datos };
+    const { todos, ...resto } = datos;
+    const copia = { app: 'ivoryx-admin', version: 1, fecha: new Date().toISOString(), ...resto, productos: todos };
     descargar(`ivoryx-copia-${hoyArchivo()}.json`, JSON.stringify(copia, null, 2), 'application/json');
     avisar('Copia descargada.');
   }
@@ -1538,7 +1839,8 @@ const Gestion = (() => {
     avisar('Restaurando…');
     try {
       await subirPorPartes('clientes', copia.clientes || []);
-      await subirPorPartes('productos', copia.productos);
+      // El vínculo con los equipos no se restaura: el equipo puede ya no existir
+      await subirPorPartes('productos', copia.productos.map(({ equipo_id, ...p }) => p));
       await subirPorPartes('movimientos', movimientos);
       await subirPorPartes('combos', copia.combos || []);
       if (copia.ajustes) await db.from('ajustes').upsert({ id: 1, stock_bajo: copia.ajustes.stock_bajo });
@@ -1599,7 +1901,9 @@ const Gestion = (() => {
     if (!ok) return;
     try {
       for (const tabla of ['movimientos', 'combos', 'productos', 'clientes']) {
-        const { error } = await db.from(tabla).delete().not('id', 'is', null);
+        let consulta = db.from(tabla).delete().not('id', 'is', null);
+        if (tabla === 'productos') consulta = consulta.is('equipo_id', null); // los productos de los equipos se mantienen
+        const { error } = await consulta;
         if (error) throw error;
       }
       await refrescar();
@@ -1621,6 +1925,12 @@ const Gestion = (() => {
       'nuevo-ingreso': () => formIngreso(),
       'nuevo-producto': () => formProducto(null, b.dataset.categoria, b.dataset.modelo),
       'editar-producto': () => formProducto(producto(id)),
+      'editar-vitrina': () => formVitrina(datos.vitrina.find((x) => x.id === id)),
+      'nueva-vitrina': () => formVitrina(),
+      'seguimiento-escribir': () => escribirSeguimiento(id),
+      'seguimiento-copiar': () => escribirSeguimiento(id, true),
+      'seguimiento-descartar': () => marcarSeguimiento(id, 'Seguimiento descartado.'),
+      'borrar-vitrina': () => borrarVitrina(id),
       'borrar-producto': () => borrarProducto(id),
       'sumar-stock': () => formIngreso(id),
       'editar-venta': () => formVenta(id),
@@ -1698,16 +2008,26 @@ const Gestion = (() => {
     await refrescar();
   }
 
-  // admin.js avisa cuando cambian los equipos, para actualizar el resumen
-  function equiposCambiaron() {
-    if (ruta.seccion === 'resumen' && cargado) render();
+  // admin.js avisa cuando cambian los equipos: sus productos (precio, costo, stock) también cambiaron
+  async function equiposCambiaron() {
+    if (cargado) await refrescar();
+  }
+
+  // Al vender un equipo (o borrar esa venta) su estado cambia en la base: se actualiza la lista de Equipos
+  function recargarEquipos() {
+    if (typeof recargar === 'function') recargar();
+  }
+
+  // Lo que le costó un equipo (precio de compra de su producto)
+  function costoEquipo(equipoId) {
+    return datos.todos.find((p) => p.equipo_id === equipoId)?.precio_compra ?? null;
   }
 
   // Colores sugeridos al cargar un producto
   document.body.insertAdjacentHTML('beforeend',
     `<datalist id="coloresStock">${NOMBRES_COLORES.map((c) => `<option value="${c}">`).join('')}</datalist>`);
 
-  return { iniciar, equiposCambiaron };
+  return { iniciar, equiposCambiaron, costoEquipo, seguimientoDeEquipo, cerrarSeguimiento };
 })();
 
 // ---------- Modo oscuro ----------
