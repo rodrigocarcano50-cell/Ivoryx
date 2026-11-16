@@ -821,6 +821,33 @@ const Gestion = (() => {
   const FOTOS_VITRINA = { silicona: 'funda.png', magsafe: 'funda.png', cargador: 'cargador.png', airpods: 'airpods.gif', templados: 'protector.webp' };
   const fotoVitrina = (a) => a.imagen || FOTOS_VITRINA[a.id] || '';
 
+  // De dónde sale el precio "desde" de una tarjeta de la muestra (igual que precio_desde_stock en stock.sql)
+  const FILTROS_FUNDA = ['silicona', 'magsafe'];
+  const FUENTES_VITRINA = [
+    { valor: 'Fundas|silicona', texto: 'fundas de silicona' },
+    { valor: 'Fundas|magsafe', texto: 'fundas MagSafe' },
+    ...CATEGORIAS.map((c) => ({ valor: `${c}|`, texto: c === 'Fundas' ? 'todas las fundas' : c.toLowerCase() }))
+  ];
+  function fuenteVitrina(v) {
+    if (!v.fuente_categoria) return '';
+    const tipo = v.fuente_categoria === 'Fundas' && FILTROS_FUNDA.includes(v.fuente_filtro) ? v.fuente_filtro : '';
+    return `${v.fuente_categoria}|${tipo}`;
+  }
+  function leerFuente(form) {
+    const [categoria = '', tipo = ''] = form.querySelector('#vitFuente').value.split('|');
+    if (!categoria) return { categoria: null, filtro: null };
+    return { categoria, filtro: tipo || form.querySelector('#vitFiltro').value.trim() || null };
+  }
+  function precioDesdeStock(categoria, filtro) {
+    const lista = datos.productos.filter((p) => p.categoria === categoria && p.precio_venta > 0 && (
+      !filtro ? true
+        : categoria === 'Fundas' && FILTROS_FUNDA.includes(filtro) ? esMagsafe(p) === (filtro === 'magsafe')
+          : normalizar(p.nombre).includes(normalizar(filtro))));
+    const conStock = lista.filter((p) => p.stock > 0);
+    const base = conStock.length ? conStock : lista;
+    return base.length ? Math.min(...base.map((p) => p.precio_venta)) : null;
+  }
+
   function contenidoMuestra() {
     const lista = datos.vitrina;
     const visibles = lista.filter((a) => a.visible).length;
@@ -836,7 +863,7 @@ const Gestion = (() => {
               <span class="vitrinaFoto">${fotoVitrina(a) ? `<img src="${esc(fotoVitrina(a))}" alt="">` : '<span class="vitrinaSinFoto">Sin foto</span>'}</span>
               <span class="vitrinaTexto">
                 <strong>${esc(a.titulo)}</strong>
-                <span>${Number(a.precio) > 0 ? `desde ${$p(a.precio)}` : 'Sin precio'}${Ivoryx.fotos(a).length > 1 ? ` · ${Ivoryx.fotos(a).length} fotos` : ''}${a.visible ? '' : ' · Oculto'}</span>
+                <span>${Number(a.precio) > 0 ? `desde ${$p(a.precio)}` : 'Sin precio'}${a.fuente_categoria ? ' (del stock)' : ''}${Ivoryx.fotos(a).length > 1 ? ` · ${Ivoryx.fotos(a).length} fotos` : ''}${a.visible ? '' : ' · Oculto'}</span>
                 ${a.imagen ? '' : '<span class="vitrinaAviso">Foto de muestra: subí la tuya</span>'}
               </span>
             </button>
@@ -874,7 +901,19 @@ const Gestion = (() => {
           <input id="vitDescripcion" value="${esc(v.descripcion || '')}" maxlength="90" placeholder="Ej: Colores lisos, para todos los modelos" autocomplete="off">
         </div>
         <div class="campo">
-          <label for="vitPrecio">Precio “desde” <span class="opcional">opcional</span></label>
+          <label for="vitFuente">Precio “desde”</label>
+          <select id="vitFuente">
+            <option value="">Lo escribo yo</option>
+            ${FUENTES_VITRINA.map((f) => `<option value="${esc(f.valor)}"${f.valor === fuenteVitrina(v) ? ' selected' : ''}>Del stock: ${esc(f.texto)}</option>`).join('')}
+          </select>
+          <p class="ayuda" id="vitFuenteAyuda"></p>
+        </div>
+        <div class="campo" id="vitFiltroCampo">
+          <label for="vitFiltro">Solo los que tengan en el nombre <span class="opcional">opcional</span></label>
+          <input id="vitFiltro" value="${esc(FILTROS_FUNDA.includes(v.fuente_filtro) ? '' : v.fuente_filtro || '')}" placeholder="Ej: Cargador" autocomplete="off">
+        </div>
+        <div class="campo" id="vitPrecioCampo">
+          <label for="vitPrecio">Precio <span class="opcional">opcional</span></label>
           <input id="vitPrecio" type="number" min="0" step="any" inputmode="decimal" value="${v.precio ?? ''}" placeholder="Vacío: no se muestra precio">
         </div>
         <div class="campo">
@@ -891,15 +930,32 @@ const Gestion = (() => {
           vacio: () => (FOTOS_VITRINA[v.id] ? `<img src="${esc(FOTOS_VITRINA[v.id])}" alt=""><span class="fotosPortada">De muestra</span>` : '<span class="vitrinaSinFoto">Sin foto</span>')
         });
         fotos.poner(Ivoryx.fotos(v));
+        // Muestra el campo que corresponde y el precio que va a tomar del stock
+        const actualizar = () => {
+          const { categoria, filtro } = leerFuente(form);
+          form.querySelector('#vitPrecioCampo').style.display = categoria ? 'none' : '';
+          form.querySelector('#vitFiltroCampo').style.display = categoria && !FILTROS_FUNDA.includes(filtro) ? '' : 'none';
+          const precio = categoria ? precioDesdeStock(categoria, filtro) : null;
+          form.querySelector('#vitFuenteAyuda').textContent = !categoria
+            ? 'No cambia cuando cambiás precios en el stock.'
+            : precio ? `En la página: desde ${$p(precio)}. Se actualiza solo cuando cambiás precios en el stock.` : 'No hay productos con precio de venta: no se muestra precio.';
+        };
+        form.querySelector('#vitFuente').addEventListener('change', actualizar);
+        form.querySelector('#vitFiltro').addEventListener('input', actualizar);
+        actualizar();
         form.querySelector('#vitTitulo').focus();
       },
       alEnviar: async (form, fallo) => {
         const valor = (id) => form.querySelector(id).value.trim();
         const titulo = valor('#vitTitulo');
+        const { categoria, filtro } = leerFuente(form);
         const fila = {
           titulo,
           descripcion: valor('#vitDescripcion') || null,
-          precio: valor('#vitPrecio') === '' ? null : Number(valor('#vitPrecio')),
+          // Con fuente, el precio lo calcula la base de datos con el stock
+          fuente_categoria: categoria,
+          fuente_filtro: filtro,
+          precio: categoria || valor('#vitPrecio') === '' ? null : Number(valor('#vitPrecio')),
           mensaje: valor('#vitMensaje') || `Hola! Quería consultar por ${titulo.charAt(0).toLowerCase() + titulo.slice(1)}. Mi iPhone es: `,
           visible: form.querySelector('#vitVisible').checked
         };

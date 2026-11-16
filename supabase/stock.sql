@@ -380,3 +380,56 @@ alter table public.equipos add column if not exists imagenes text[] not null def
 alter table public.vitrina add column if not exists imagenes text[] not null default '{}';
 update public.equipos set imagenes = array[imagen] where imagen <> '' and cardinality(imagenes) = 0;
 update public.vitrina set imagenes = array[imagen] where imagen <> '' and cardinality(imagenes) = 0;
+
+-- ---------- Precio de la muestra tomado del stock ----------
+-- fuente_categoria: categoría del stock de la que sale el precio "desde" (null: se escribe a mano).
+-- fuente_filtro: en Fundas, 'silicona' o 'magsafe'; en otras, texto que tiene que estar en el nombre.
+-- El precio es el precio de venta más barato de esos productos (de los que tienen stock; si no hay, de todos).
+alter table public.vitrina add column if not exists fuente_categoria text;
+alter table public.vitrina add column if not exists fuente_filtro text;
+
+create or replace function public.precio_desde_stock(p_categoria text, p_filtro text)
+returns numeric language sql stable security invoker set search_path = '' as $$
+  select coalesce(min(p.precio_venta) filter (where p.stock > 0), min(p.precio_venta))
+    from public.productos p
+   where p.equipo_id is null and p.categoria = p_categoria and p.precio_venta > 0
+     and case
+           when coalesce(trim(p_filtro), '') = '' then true
+           when p_categoria = 'Fundas' and lower(p_filtro) in ('silicona', 'magsafe') then
+             (lower(trim(coalesce(p.color, ''))) = 'transparente' or p.nombre ilike '%magsafe%') = (lower(p_filtro) = 'magsafe')
+           else strpos(lower(p.nombre), lower(trim(p_filtro))) > 0
+         end
+$$;
+
+create or replace function public.vitrina_precio()
+returns trigger language plpgsql security invoker set search_path = '' as $$
+begin
+  if new.fuente_categoria is not null then
+    new.precio := public.precio_desde_stock(new.fuente_categoria, new.fuente_filtro);
+  end if;
+  return new;
+end $$;
+
+drop trigger if exists vitrina_precio on public.vitrina;
+create trigger vitrina_precio before insert or update on public.vitrina
+  for each row execute function public.vitrina_precio();
+
+create or replace function public.productos_a_vitrina()
+returns trigger language plpgsql security invoker set search_path = '' as $$
+begin
+  update public.vitrina v set precio = public.precio_desde_stock(v.fuente_categoria, v.fuente_filtro)
+   where v.fuente_categoria is not null
+     and v.precio is distinct from public.precio_desde_stock(v.fuente_categoria, v.fuente_filtro);
+  return null;
+end $$;
+
+drop trigger if exists productos_vitrina on public.productos;
+create trigger productos_vitrina after insert or update or delete on public.productos
+  for each statement execute function public.productos_a_vitrina();
+
+-- Las 5 tarjetas originales toman el precio del stock
+update public.vitrina set fuente_categoria = 'Fundas', fuente_filtro = 'silicona' where id = 'silicona' and fuente_categoria is null;
+update public.vitrina set fuente_categoria = 'Fundas', fuente_filtro = 'magsafe' where id = 'magsafe' and fuente_categoria is null;
+update public.vitrina set fuente_categoria = 'Cargadores', fuente_filtro = 'Cargador' where id = 'cargador' and fuente_categoria is null;
+update public.vitrina set fuente_categoria = 'Auriculares' where id = 'airpods' and fuente_categoria is null;
+update public.vitrina set fuente_categoria = 'Templados' where id = 'templados' and fuente_categoria is null;
