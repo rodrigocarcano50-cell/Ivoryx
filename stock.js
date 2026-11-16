@@ -522,7 +522,9 @@ const Gestion = (() => {
       ${cat === 'Fundas' ? `
         ${boton('Crear modelos de fundas', 'crear-fundas', '', 'btnChico')}
         ${boton('Precio de compra: silicona', 'precio-fundas', 'data-tipo="silicona"', 'btnChico')}
-        ${boton('Precio de compra: MagSafe', 'precio-fundas', 'data-tipo="magsafe"', 'btnChico')}` : ''}
+        ${boton('Precio de compra: MagSafe', 'precio-fundas', 'data-tipo="magsafe"', 'btnChico')}
+        ${boton('Precio de venta: silicona', 'precio-fundas', 'data-tipo="silicona" data-campo="precio_venta"', 'btnChico')}
+        ${boton('Precio de venta: MagSafe', 'precio-fundas', 'data-tipo="magsafe" data-campo="precio_venta"', 'btnChico')}` : ''}
       ${cat === 'Cargadores' ? boton('Crear combo', 'nuevo-combo', '', 'btnChico') : ''}
       ${boton('Exportar CSV', 'exportar-categoria', `data-categoria="${esc(cat)}"`, 'btnChico')}
     </div>`;
@@ -960,6 +962,12 @@ const Gestion = (() => {
             <label class="btnChico">Importar productos CSV<input type="file" id="archivoCsv" accept=".csv,text/csv" class="visualmenteOculto"></label>
             ${boton('Exportar movimientos CSV', 'exportar-movimientos', '', 'btnChico')}
           </div>
+        </section>
+
+        <section class="caja cajaPeligro">
+          <h2 class="cajaTitulo">Reiniciar historial</h2>
+          <p class="sutil margenAbajo">Borra todas las ventas, ingresos y ajustes, pero el stock queda como está. Después queda un solo ingreso con lo que tenés hoy, a su precio de compra: así la plata gastada pasa a ser lo que te costó la mercadería que tenés. Los clientes se mantienen. No se puede deshacer: descargá una copia antes.</p>
+          ${boton('Reiniciar historial', 'reiniciar-historial', '', 'btnChico peligroLleno')}
         </section>
 
         <section class="caja cajaPeligro">
@@ -1614,18 +1622,19 @@ const Gestion = (() => {
     });
   }
 
-  function formPrecioFundas(tipo) {
+  function formPrecioFundas(tipo, campo = 'precio_compra') {
     const magsafe = tipo === 'magsafe';
     const objetivo = datos.productos.filter((p) => p.categoria === 'Fundas' && esMagsafe(p) === magsafe);
     const nombre = magsafe ? 'MagSafe (transparentes)' : 'de silicona';
+    const cual = campo === 'precio_venta' ? 'venta' : 'compra';
     if (!objetivo.length) return avisar(`No hay fundas ${nombre} cargadas.`);
-    const iguales = objetivo.every((p) => p.precio_compra === objetivo[0].precio_compra);
+    const iguales = objetivo.every((p) => p[campo] === objetivo[0][campo]);
     abrirModal({
-      titulo: `Precio de compra: fundas ${nombre}`,
-      cuerpo: `<p class="textoModal">Cambia el precio de compra de <strong>${plural(objetivo.length, 'funda')} ${nombre}</strong> en todos los modelos. ${iguales ? `Ahora: ${$p(objetivo[0].precio_compra)}.` : 'Ahora tienen precios distintos.'}</p>
+      titulo: `Precio de ${cual}: fundas ${nombre}`,
+      cuerpo: `<p class="textoModal">Cambia el precio de ${cual} de <strong>${plural(objetivo.length, 'funda')} ${nombre}</strong> en todos los modelos. ${iguales ? `Ahora: ${$p(objetivo[0][campo])}.` : 'Ahora tienen precios distintos.'}</p>
         <div class="campo">
-          <label for="precioFundas">Nuevo precio de compra</label>
-          <input id="precioFundas" type="number" min="0" step="any" inputmode="decimal" value="${iguales ? objetivo[0].precio_compra : ''}">
+          <label for="precioFundas">Nuevo precio de ${cual}</label>
+          <input id="precioFundas" type="number" min="0" step="any" inputmode="decimal" value="${iguales ? objetivo[0][campo] : ''}">
         </div>`,
       pie: `<button type="button" class="btnTexto" data-cerrar>Cancelar</button>
             <button type="submit" class="btn btnPrimario">Actualizar ${objetivo.length}</button>`,
@@ -1633,7 +1642,7 @@ const Gestion = (() => {
       alEnviar: async (form, fallo) => {
         const precio = numero(form.querySelector('#precioFundas').value);
         if (precio === null || !(precio >= 0)) return fallo('Escribí un precio válido.');
-        const { error } = await db.from('productos').update({ precio_compra: precio }).in('id', objetivo.map((p) => p.id));
+        const { error } = await db.from('productos').update({ [campo]: precio }).in('id', objetivo.map((p) => p.id));
         if (error) throw error;
         await refrescar();
         avisar(`${plural(objetivo.length, 'funda actualizada', 'fundas actualizadas')}.`);
@@ -1893,6 +1902,40 @@ const Gestion = (() => {
     }
   }
 
+  // Borra ventas, ingresos y ajustes sin tocar el stock, y deja un ingreso
+  // "Stock inicial" con lo que hay hoy a su precio de compra (= plata gastada).
+  async function reiniciarHistorial() {
+    const enStock = datos.todos.filter((p) => p.stock > 0);
+    const gastado = suma(enStock, (p) => p.stock * (p.precio_compra || 0));
+    const ok = await confirmar({
+      titulo: 'Reiniciar historial',
+      texto: `Se borran ${plural(datos.movimientos.length, 'movimiento')} (ventas, ingresos y ajustes). El stock no cambia. Queda un ingreso inicial con ${plural(suma(enStock, (p) => p.stock), 'unidad', 'unidades')} y la plata gastada pasa a ser <strong>${$p(gastado)}</strong>. <strong>No se puede deshacer.</strong>`,
+      accion: 'Reiniciar',
+      escribirPalabra: 'REINICIAR'
+    });
+    if (!ok) return;
+    avisar('Reiniciando…');
+    try {
+      const operacion = crypto.randomUUID();
+      const fecha = new Date().toISOString();
+      // Primero se crea el ingreso inicial y después se borra lo viejo: si algo falla, no se pierde nada
+      await subirPorPartes('movimientos', enStock.map((p) => ({
+        id: crypto.randomUUID(), operacion, tipo: 'ingreso', producto_id: p.id, cantidad: p.stock,
+        costo_unitario: p.precio_compra || 0, fecha, nota: 'Stock inicial (historial reiniciado)'
+      })));
+      const { error } = await db.from('movimientos').delete().neq('operacion', operacion);
+      if (error) throw error;
+      const borrarSeg = await db.from('seguimientos').delete().not('operacion', 'is', null);
+      if (borrarSeg.error) throw borrarSeg.error;
+      await refrescar();
+      avisar('Historial reiniciado.');
+    } catch (error) {
+      console.error(error);
+      await refrescar();
+      avisar(mensajeError(error, 'No se pudo reiniciar el historial. Probá de nuevo.'));
+    }
+  }
+
   // ---------- Eventos ----------
   vista.addEventListener('click', (e) => {
     const b = e.target.closest('[data-accion]');
@@ -1918,7 +1961,7 @@ const Gestion = (() => {
       'borrar-combo': () => borrarCombo(id),
       'vender-combo': () => formVenta('', id),
       'crear-fundas': () => formFundas(),
-      'precio-fundas': () => formPrecioFundas(b.dataset.tipo),
+      'precio-fundas': () => formPrecioFundas(b.dataset.tipo, b.dataset.campo),
       'exportar-categoria': () => exportarCategoria(b.dataset.categoria),
       'exportar-movimientos': () => exportarMovimientos(),
       'limpiar-filtros': () => { filtrosMov = { desde: '', hasta: '', tipo: '', categoria: '', producto: '' }; render(); },
@@ -1928,6 +1971,7 @@ const Gestion = (() => {
       'historial-cliente': () => historialCliente(id),
       'descargar-copia': () => descargarCopia(),
       'borrar-todo': () => borrarTodo(),
+      'reiniciar-historial': () => reiniciarHistorial(),
       'cargar-equipo': () => { location.hash = '#equipos'; abrirEditor(); }
     };
     acciones[b.dataset.accion]?.();
